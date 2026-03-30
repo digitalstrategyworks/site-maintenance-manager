@@ -7,7 +7,7 @@ Tags:              updates, maintenance, plugins, themes, multisite, email, smtp
 Requires at least: 5.8
 Tested up to:      6.7
 Requires PHP:      8.0
-Stable tag:        1.4.8
+Stable tag:        1.4.9
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -390,6 +390,15 @@ The App Password method above works identically for Workspace accounts. Alternat
 
 == Changelog ==
 
+= 1.4.9 =
+* Renamed plugin from "WP Maintenance Manager" to "Site Maintenance Manager"
+  to comply with WordPress.org plugin repository naming rules, which prohibit
+  plugin display names beginning with "WP". All display names, text domain,
+  plugin slug, folder name, and main PHP filename updated accordingly.
+  Internal function and database prefixes (wpmm_) are unchanged to preserve
+  compatibility with existing installations.
+
+
 = 1.4.8 =
 * Feature: Avada theme detection. When the Avada theme is installed, the Updates
   page shows a contextual notice explaining the required update order: Avada theme
@@ -496,6 +505,10 @@ The App Password method above works identically for Workspace accounts. Alternat
 * 24-entry error code dictionary with plain-English explanations.
 
 == Upgrade Notice ==
+
+= 1.4.9 =
+Plugin renamed to Site Maintenance Manager for WordPress.org compliance. No database or functional changes.
+
 
 = 1.4.8 =
 Adds Avada theme detection and update order guidance. Fixes SMTP From Name using site name instead of configured value.
