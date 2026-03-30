@@ -248,6 +248,9 @@ jQuery(function ($) {
         sessionId          = '';
         updatesRanThisLoad = false;
         performingAdminId  = parseInt($('#wpmm-performing-admin').val() || 0, 10);
+        // Clear both state banners on a full refresh
+        $('#wpmm-global-success').prop('hidden', true);
+        $('#wpmm-global-progress').prop('hidden', true);
         loadUpdates();
     });
 
@@ -269,7 +272,17 @@ jQuery(function ($) {
             alert('Please select at least one item to update.');
             return;
         }
+
+        // Reset state for a fresh batch: hide the previous success banner,
+        // show an in-progress indicator.
+        $('#wpmm-global-success').prop('hidden', true);
+        $('#wpmm-global-progress').prop('hidden', false)
+            .html('<span class="dashicons dashicons-update wpmm-spin"></span> '
+                + 'Updating ' + items.length + ' item' + (items.length !== 1 ? 's' : '') + '…');
+
         runUpdatesSequential(items, 0, function () {
+            // Hide progress, show success.
+            $('#wpmm-global-progress').prop('hidden', true);
             $('#wpmm-global-success').prop('hidden', false);
         });
     });

@@ -73,11 +73,18 @@ function wpmm_configure_phpmailer( $phpmailer ) {
     $phpmailer->SMTPSecure  = ( $enc === 'tls' ) ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS
                                                   : ( $enc === 'ssl' ? PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS : '' );
 
-    // From name / address (use whatever is already set by wp_mail callers)
-    if ( ! empty( $s['smtp_from_email'] ) ) {
-        $phpmailer->From     = sanitize_email( $s['smtp_from_email'] );
-        $phpmailer->FromName = $s['smtp_from_name'] ?? ( $s['company_name'] ?? get_bloginfo('name') );
-    }
+    // From name / address.
+    // Always set both so the configured sender is used regardless of what wp_mail() passed.
+    // Use !empty() so an empty string falls through to the next fallback rather than
+    // being used as-is (which would let PHPMailer default to the site name).
+    $from_name  = ! empty( $s['smtp_from_name'] )  ? $s['smtp_from_name']
+               : ( ! empty( $s['company_name'] )   ? $s['company_name']
+               :   get_bloginfo( 'name' ) );
+    $from_email = ! empty( $s['smtp_from_email'] ) ? sanitize_email( $s['smtp_from_email'] )
+               : $phpmailer->From; // keep whatever wp_mail() already set
+
+    $phpmailer->From     = $from_email;
+    $phpmailer->FromName = $from_name;
 }
 
 // ── AJAX: save SMTP settings ──────────────────────────────────────────────────

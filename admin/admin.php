@@ -464,6 +464,12 @@ function wpmm_render_updates() {
                 </p>
             </div>
 
+            <!-- Progress indicator — visible while a batch is running -->
+            <div id="wpmm-global-progress" class="wpmm-notice wpmm-notice-info" hidden>
+                <span class="dashicons dashicons-update wpmm-spin"></span> Updates in progress&hellip;
+            </div>
+
+            <!-- Success banner — shown when all selected items complete -->
             <div id="wpmm-global-success" class="wpmm-notice wpmm-notice-success" hidden>
                 <span class="dashicons dashicons-yes-alt"></span>
                 All selected items were updated successfully!
