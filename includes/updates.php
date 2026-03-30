@@ -40,7 +40,7 @@ function wpmm_get_available_updates() {
     $all_plugins    = get_plugins();
     if ( ! empty( $update_plugins->response ) ) {
         foreach ( $update_plugins->response as $plugin_file => $plugin_data ) {
-            if ( strpos( $plugin_file, 'wp-maintenance-manager' ) !== false ) {
+            if ( strpos( $plugin_file, 'site-maintenance-manager' ) !== false ) {
                 continue;
             }
             $result['plugins'][] = [

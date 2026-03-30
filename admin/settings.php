@@ -1,6 +1,6 @@
 <?php
 /**
- * Settings page — WP Maintenance Manager.
+ * Settings page — Site Maintenance Manager.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 

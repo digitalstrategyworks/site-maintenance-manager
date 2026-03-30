@@ -1,6 +1,6 @@
 <?php
 /**
- * SMTP / Email Mailer configuration for WP Maintenance Manager.
+ * SMTP / Email Mailer configuration for Site Maintenance Manager.
  *
  * Hooks into phpmailer_init to override WordPress's default PHP mail()
  * with a configured SMTP server or API-based mailer.
@@ -136,9 +136,9 @@ function wpmm_ajax_test_smtp() {
     }
 
     $site    = get_bloginfo( 'name' );
-    $subject = '[' . $site . '] WP Maintenance Manager — SMTP Test';
+    $subject = '[' . $site . '] Site Maintenance Manager — SMTP Test';
     $body    = '<p>This is a test email sent from <strong>' . esc_html( $site ) . '</strong> '
-             . 'via WP Maintenance Manager\'s SMTP configuration.</p>'
+             . 'via Site Maintenance Manager\'s SMTP configuration.</p>'
              . '<p>If you received this, your SMTP settings are working correctly.</p>';
 
     $headers = [ 'Content-Type: text/html; charset=UTF-8' ];

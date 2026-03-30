@@ -1,4 +1,4 @@
-# WP Maintenance Manager
+# Site Maintenance Manager
 
 **Version:** 1.4.8  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
@@ -41,7 +41,7 @@ A professional WordPress maintenance plugin for developers and agencies. Manage 
 
 ## What It Does
 
-WP Maintenance Manager replaces the ad hoc workflow of tab-switching between the WordPress Updates screen, a spreadsheet, and an email client. It gives you one panel to:
+Site Maintenance Manager replaces the ad hoc workflow of tab-switching between the WordPress Updates screen, a spreadsheet, and an email client. It gives you one panel to:
 
 - **Run updates** for WordPress Core, all plugins, and all themes — in separate, clearly labelled sections with per-item checkboxes, inline success/failure feedback, and plain-English error explanations
 - **Log every result** automatically to a searchable, paginated history
@@ -127,9 +127,9 @@ WP Maintenance Manager replaces the ad hoc workflow of tab-switching between the
 ### From WordPress admin (recommended)
 
 1. Go to **Plugins → Add New → Upload Plugin**
-2. Upload `wp-maintenance-manager.zip`
+2. Upload `site-maintenance-manager.zip`
 3. Click **Install Now** then **Activate Plugin**
-4. Navigate to **Maintenance Mgr** in the left admin menu
+4. Navigate to **Site Maintenance** in the left admin menu
 
 ### For Multisite / Network
 
@@ -139,13 +139,13 @@ WP Maintenance Manager replaces the ad hoc workflow of tab-switching between the
 
 ### Manual
 
-1. Unzip and upload the `wp-maintenance-manager` folder to `/wp-content/plugins/`
+1. Unzip and upload the `site-maintenance-manager` folder to `/wp-content/plugins/`
 2. Activate from the WordPress Plugins screen
 
 ### First-time setup
 
 After activation:
-1. Go to **Maintenance Mgr → Settings**
+1. Go to **Site Maintenance → Settings**
 2. Upload your company logo and enter your company name
 3. Enter the client email address
 4. Select the default administrator who performs updates
@@ -454,7 +454,7 @@ All plugin settings (company name, logo URL, client email, default admin ID, SMT
 ## Frequently Asked Questions
 
 **Do I need a separate SMTP plugin?**
-No. WP Maintenance Manager includes built-in SMTP configuration. If you already use WP Mail SMTP, FluentSMTP, or Post SMTP, leave this plugin's SMTP setting on WordPress Default to avoid conflicts.
+No. Site Maintenance Manager includes built-in SMTP configuration. If you already use WP Mail SMTP, FluentSMTP, or Post SMTP, leave this plugin's SMTP setting on WordPress Default to avoid conflicts.
 
 **My updates are not appearing in the Update Log.**
 If you upgraded the plugin by uploading files (without deactivating first), the database may not be fully upgraded. Open Update Log, expand the Database Diagnostic panel, and click Force DB Upgrade Now.

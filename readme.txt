@@ -1,8 +1,8 @@
-=== WP Maintenance Manager ===
+=== Site Maintenance Manager ===
 Contributors:      tonyzeoli
 Author:            Tony Zeoli
 Author URI:        https://digitalstrategyworks.com
-Plugin URI:        https://digitalstrategyworks.com/wp-maintenance-manager
+Plugin URI:        https://digitalstrategyworks.com/site-maintenance-manager
 Tags:              updates, maintenance, plugins, themes, multisite, email, smtp, reporting
 Requires at least: 5.8
 Tested up to:      6.7
@@ -15,7 +15,7 @@ A professional WordPress maintenance plugin for developers and agencies. Manage 
 
 == Description ==
 
-WP Maintenance Manager is a complete WordPress site maintenance solution built for web developers, digital agencies, and site administrators who manage one or more WordPress websites. It brings together everything you need to keep a site up to date, communicate that work to clients, and ensure those communications are reliably delivered.
+Site Maintenance Manager is a complete WordPress site maintenance solution built for web developers, digital agencies, and site administrators who manage one or more WordPress websites. It brings together everything you need to keep a site up to date, communicate that work to clients, and ensure those communications are reliably delivered.
 
 The plugin is designed to replace ad hoc, tab-switching update workflows with a single, purpose-built admin panel. You run updates, the plugin logs every result, you send a branded report to your client, and you move on to the next site.
 
@@ -118,22 +118,22 @@ The plugin is designed to replace ad hoc, tab-switching update workflows with a 
 = Single-Site Install =
 
 1. In your WordPress admin go to **Plugins → Add New → Upload Plugin**.
-2. Upload `wp-maintenance-manager.zip` and click **Install Now**.
+2. Upload `site-maintenance-manager.zip` and click **Install Now**.
 3. Click **Activate Plugin**.
-4. Navigate to **Maintenance Mgr** in the left-hand admin menu.
+4. Navigate to **Site Maintenance** in the left-hand admin menu.
 5. Open **Settings** and configure your company branding, client email, default administrator, and SMTP delivery.
 
 = Multisite / Network Install =
 
 1. Log in as a Super Admin and go to **Network Admin → Plugins → Add New → Upload Plugin**.
-2. Upload `wp-maintenance-manager.zip` and click **Install Now**.
+2. Upload `site-maintenance-manager.zip` and click **Install Now**.
 3. Click **Network Activate** to activate across all sites simultaneously, **or** activate per-site from each site's own Plugins screen.
-4. Navigate to **Maintenance Mgr** in the Network Admin menu or any site's admin menu.
+4. Navigate to **Site Maintenance** in the Network Admin menu or any site's admin menu.
 5. Each site has its own independent Settings, Update Log, and Email Log.
 
 = Manual Install =
 
-1. Unzip the archive and upload the `wp-maintenance-manager` folder to `/wp-content/plugins/`.
+1. Unzip the archive and upload the `site-maintenance-manager` folder to `/wp-content/plugins/`.
 2. Activate from the WordPress Plugins screen.
 
 ---
@@ -142,7 +142,7 @@ The plugin is designed to replace ad hoc, tab-switching update workflows with a 
 
 = Running Updates =
 
-1. Go to **Maintenance Mgr → Updates**.
+1. Go to **Site Maintenance → Updates**.
 2. The page loads and automatically scans for available updates.
 3. The **Performing Administrator** dropdown at the top defaults to your saved default admin (set in Settings). Override it here for this session only.
 4. Check the items you want to update — or use **Select All** per section.
@@ -151,7 +151,7 @@ The plugin is designed to replace ad hoc, tab-switching update workflows with a 
 
 = Sending a Report Email =
 
-1. After running updates, go to **Maintenance Mgr → Email Reports**.
+1. After running updates, go to **Site Maintenance → Email Reports**.
 2. The plugin automatically selects the session you just ran — you will see "Updates from session on [date]" in the Email Template section.
 3. Confirm the recipient email (pre-filled from Settings) and edit the subject line if needed.
 4. Click **Send Report Email**.
@@ -223,13 +223,13 @@ Plugin settings (branding, SMTP, client email, default admin) are stored in the 
 
 = Can I use this plugin alongside WP Mail SMTP or other SMTP plugins? =
 
-It is recommended to use either WP Maintenance Manager's built-in SMTP configuration **or** a separate SMTP plugin — not both. Both plugins hook into `phpmailer_init` and will conflict. If you already have WP Mail SMTP, FluentSMTP, or Post SMTP installed and configured, leave WP Maintenance Manager's SMTP setting on **WordPress Default** and let the other plugin handle delivery.
+It is recommended to use either Site Maintenance Manager's built-in SMTP configuration **or** a separate SMTP plugin — not both. Both plugins hook into `phpmailer_init` and will conflict. If you already have WP Mail SMTP, FluentSMTP, or Post SMTP installed and configured, leave Site Maintenance Manager's SMTP setting on **WordPress Default** and let the other plugin handle delivery.
 
 ---
 
 == SMTP Setup Guides ==
 
-WP Maintenance Manager includes a built-in SMTP configuration panel that reconfigures WordPress's email delivery without requiring a separate plugin. The following guides walk through setting up each supported provider.
+Site Maintenance Manager includes a built-in SMTP configuration panel that reconfigures WordPress's email delivery without requiring a separate plugin. The following guides walk through setting up each supported provider.
 
 Go to **Settings → SMTP & Email Delivery**, click your provider's tile, and enter the credentials described below.
 
@@ -265,7 +265,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 3. Go to **Settings → API Keys → Create API Key**.
 4. Choose **Restricted Access** and enable **Mail Send → Full Access**.
 5. Copy the API key (it is only shown once).
-6. In WP Maintenance Manager Settings: select **SendGrid**, enter `apikey` (literally, that exact text) as the **Username**, and paste the API key as the **Password**.
+6. In Site Maintenance Manager Settings: select **SendGrid**, enter `apikey` (literally, that exact text) as the **Username**, and paste the API key as the **Password**.
 7. Set your verified sender address as the **From Email**.
 
 **Server details (pre-configured):** `smtp.sendgrid.net` — port `587` — TLS
@@ -281,7 +281,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 2. Add and verify your sending domain under **Sending → Domains**.
 3. Go to **Sending → Domain Settings → SMTP credentials**.
 4. Note your SMTP login (usually `postmaster@yourdomain.com`) and generate or copy the password.
-5. In WP Maintenance Manager Settings: select **Mailgun**, enter your SMTP login as the **Username**, and the SMTP password as the **Password**.
+5. In Site Maintenance Manager Settings: select **Mailgun**, enter your SMTP login as the **Username**, and the SMTP password as the **Password**.
 6. Set a verified sender address as the **From Email**.
 
 **Server details (pre-configured):** `smtp.mailgun.org` — port `587` — TLS
@@ -298,7 +298,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 1. Create a free account at [brevo.com](https://brevo.com).
 2. Go to your account profile (top-right) → **SMTP & API**.
 3. Under the **SMTP** tab, note your **Login** (your Brevo account email) and click **Generate a new SMTP Key** to create a password.
-4. In WP Maintenance Manager Settings: select **Brevo**, enter your Brevo login email as the **Username**, and the SMTP key as the **Password**.
+4. In Site Maintenance Manager Settings: select **Brevo**, enter your Brevo login email as the **Username**, and the SMTP key as the **Password**.
 5. Set a sender address you have verified in Brevo as the **From Email**.
 
 **Server details (pre-configured):** `smtp-relay.brevo.com` — port `587` — TLS
@@ -312,7 +312,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 **Setup steps:**
 1. Sign up at [sendlayer.com](https://sendlayer.com) and add your sending domain.
 2. From the SendLayer dashboard, copy your **SMTP Username** and **SMTP Password**.
-3. In WP Maintenance Manager Settings: select **SendLayer**, enter those credentials, and set a verified address as the **From Email**.
+3. In Site Maintenance Manager Settings: select **SendLayer**, enter those credentials, and set a verified address as the **From Email**.
 
 **Server details (pre-configured):** `smtp.sendlayer.net` — port `587` — TLS
 
@@ -326,7 +326,7 @@ Use this option with any SMTP server not listed as a named provider — for exam
 1. Create an account at [smtp.com](https://smtp.com).
 2. Go to **Sender → SMTP credentials**.
 3. Copy your **Sender Name** (this is the Username) and your **API Key** (this is the Password).
-4. In WP Maintenance Manager Settings: select **SMTP.com**, enter the Sender Name as **Username** and the API Key as **Password**.
+4. In Site Maintenance Manager Settings: select **SMTP.com**, enter the Sender Name as **Username** and the API Key as **Password**.
 5. Set your verified sender address as the **From Email**.
 
 **Server details (pre-configured):** `send.smtp.com` — port `587` — TLS
@@ -341,9 +341,9 @@ Use this option with any SMTP server not listed as a named provider — for exam
 1. Sign in to your Google Account at [myaccount.google.com](https://myaccount.google.com).
 2. Go to **Security** and confirm that **2-Step Verification** is turned on. (App Passwords are not available without it.)
 3. In the Security search bar, search for **App Passwords**.
-4. Click **Create**, choose **Other (custom name)**, and type `WordPress` or `WP Maintenance Manager`.
+4. Click **Create**, choose **Other (custom name)**, and type `WordPress` or `Site Maintenance Manager`.
 5. Google displays a 16-character code. Copy it immediately — it will not be shown again.
-6. In WP Maintenance Manager Settings: select **Gmail / Google**, enter your full Gmail address (`you@gmail.com`) as the **Username**, and paste the 16-character App Password as the **Password**.
+6. In Site Maintenance Manager Settings: select **Gmail / Google**, enter your full Gmail address (`you@gmail.com`) as the **Username**, and paste the 16-character App Password as the **Password**.
 7. Set your Gmail address as the **From Email**.
 
 **Google Workspace (paid) — setup steps:**
@@ -364,7 +364,7 @@ The App Password method above works identically for Workspace accounts. Alternat
 2. Under **Advanced security options**, confirm **Two-step verification** is on.
 3. Click **Create a new app password**.
 4. Copy the generated password.
-5. In WP Maintenance Manager Settings: select **Microsoft / Outlook**, enter your full Outlook address (`you@outlook.com` or `you@hotmail.com`) as the **Username**, and the app password as the **Password**.
+5. In Site Maintenance Manager Settings: select **Microsoft / Outlook**, enter your full Outlook address (`you@outlook.com` or `you@hotmail.com`) as the **Username**, and the app password as the **Password**.
 
 **Microsoft 365 / Office 365 organisations — setup steps:**
 1. A Microsoft 365 admin must enable SMTP AUTH for the sending mailbox. In the **Microsoft 365 Admin Centre** go to: **Users → Active Users → select the user → Mail tab → Manage email apps → check Authenticated SMTP**.
@@ -505,7 +505,7 @@ Adds Avada theme detection and update order guidance. Fixes SMTP From Name using
 Adds Gmail and Microsoft SMTP support. No database changes.
 
 = 1.4.4 =
-Adds built-in SMTP configuration. No database changes. If you use a separate SMTP plugin, leave WP Maintenance Manager's SMTP setting on WordPress Default.
+Adds built-in SMTP configuration. No database changes. If you use a separate SMTP plugin, leave Site Maintenance Manager's SMTP setting on WordPress Default.
 
 = 1.4.3 =
 Email header redesigned. Update Log gains per-page selector and Prev/Next pagination. No database changes.

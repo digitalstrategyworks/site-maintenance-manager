@@ -183,7 +183,7 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0 ) {
         : '';
 
     // ── Footer ────────────────────────────────────────────────────────────────
-    $sender = $company ?: 'WP Maintenance Manager';
+    $sender = $company ?: 'Site Maintenance Manager';
 
     // ── Assemble ─────────────────────────────────────────────────────────────
     return '<!DOCTYPE html>
@@ -228,7 +228,7 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0 ) {
 function wpmm_send_email( $to, $subject, $body, $admin_id = 0 ) {
     global $wpdb;
 
-    $from_name  = 'WP Maintenance Manager';
+    $from_name  = 'Site Maintenance Manager';
     $from_email = get_option( 'admin_email' );
 
     $s = wpmm_get_settings();

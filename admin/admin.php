@@ -28,8 +28,8 @@ define( 'WPMM_SLUG_SETTINGS',   'wpmm-settings' );
  */
 function wpmm_build_menus( $cap ) {
     add_menu_page(
-        'WP Maintenance Manager',
-        'Maintenance Mgr',
+        'Site Maintenance Manager',
+        'Site Maintenance',
         $cap,
         WPMM_SLUG_PARENT,
         'wpmm_render_no_page',
@@ -214,7 +214,7 @@ function wpmm_page_header( $active_slug ) {
                 <span class="dashicons dashicons-shield-alt"></span>
             <?php endif; ?>
             <div>
-                <h1>WP Maintenance Manager<?php echo $wpmm_company ? ' &mdash; ' . esc_html( $wpmm_company ) : ''; ?></h1>
+                <h1>Site Maintenance Manager<?php echo $wpmm_company ? ' &mdash; ' . esc_html( $wpmm_company ) : ''; ?></h1>
                 <p>
                     <?php echo esc_html( get_bloginfo( 'name' ) ); ?> &mdash;
                     <?php echo esc_url( get_bloginfo( 'url' ) ); ?>
@@ -242,7 +242,7 @@ function wpmm_page_header( $active_slug ) {
 // =========================================================================
 function wpmm_cap_gate() {
     if ( ! current_user_can( wpmm_required_cap() ) ) {
-        wp_die( __( 'You do not have permission to access this page.', 'wp-maintenance-manager' ) );
+        wp_die( __( 'You do not have permission to access this page.', 'site-maintenance-manager' ) );
     }
 }
 
