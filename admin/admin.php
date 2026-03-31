@@ -248,34 +248,20 @@ function wpmm_cap_gate() {
 }
 
 // =========================================================================
-// Tip card — rendered at the bottom of every plugin page via admin_footer
+// Tip card — call wpmm_tip_card() inside any page's .wpmm-content div
 // =========================================================================
-add_action( 'admin_footer', 'wpmm_render_tip_card' );
-function wpmm_render_tip_card() {
-    // Only show on our own admin pages.
-    $screen = get_current_screen();
-    if ( ! $screen ) return;
-    $our_slugs = [
-        WPMM_SLUG_DASHBOARD, WPMM_SLUG_UPDATES, WPMM_SLUG_LOG,
-        WPMM_SLUG_EMAIL, WPMM_SLUG_SETTINGS,
-    ];
-    $on_our_page = false;
-    foreach ( $our_slugs as $slug ) {
-        if ( str_contains( $screen->id, $slug ) ) {
-            $on_our_page = true;
-            break;
-        }
-    }
-    if ( ! $on_our_page ) return;
+function wpmm_tip_card() {
     ?>
-    <div class="wpmm-tip-card-wrap">
-        <div class="wpmm-tip-card">
+    <div class="wpmm-card wpmm-tip-card">
+        <div class="wpmm-tip-inner">
             <span class="wpmm-tip-coffee">&#9749;</span>
             <div class="wpmm-tip-body">
-                <p class="wpmm-tip-heading">Enjoying Site Maintenance Manager?</p>
+                <h2 class="wpmm-card-title" style="margin-bottom:6px;">
+                    Enjoying Site Maintenance Manager?
+                </h2>
                 <p class="wpmm-tip-text">
-                    If this plugin saves you time, consider buying the author a coffee.
-                    Every tip is appreciated and helps support continued development.
+                    If this plugin saves you time, consider buying the author a coffee &mdash;
+                    every tip is appreciated and helps support continued development.
                 </p>
                 <div class="wpmm-tip-actions">
                     <a href="https://www.paypal.com/ncp/payment/NQVL9AFHQ2ALG"
@@ -285,7 +271,8 @@ function wpmm_render_tip_card() {
                         Tip via PayPal
                     </a>
                     <span class="wpmm-tip-venmo">
-                        or <strong>Venmo</strong> <span class="wpmm-tip-venmo-handle">&#64;dswks</span>
+                        or &nbsp;<strong>Venmo</strong>&nbsp;
+                        <span class="wpmm-tip-venmo-handle">&#64;dswks</span>
                     </span>
                 </div>
             </div>
@@ -415,6 +402,7 @@ function wpmm_render_dashboard() {
                 </a>
             </div>
 
+            <?php wpmm_tip_card(); ?>
         </div><!-- .wpmm-content -->
     </div><!-- .wpmm-wrap -->
     <?php
@@ -579,6 +567,7 @@ function wpmm_render_updates() {
                 </a>
             </div>
 
+            <?php wpmm_tip_card(); ?>
         </div>
     </div>
     <?php
@@ -1010,6 +999,7 @@ function wpmm_render_log() {
                 </div>
             </details>
 
+            <?php wpmm_tip_card(); ?>
         </div>
     </div>
     <?php
@@ -1204,6 +1194,7 @@ function wpmm_render_email() {
                 <!-- Iframe starts hidden; shown only once content is loaded -->
                 <iframe id="wpmm-modal-iframe" class="wpmm-modal-iframe wpmm-hidden" title="Email preview" sandbox="allow-same-origin"></iframe>
             </div>
+            <?php wpmm_tip_card(); ?>
         </div>
     </div>
     <?php

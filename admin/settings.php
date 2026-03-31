@@ -509,6 +509,7 @@ function wpmm_render_settings() {
 
             </div><!-- #wpmm-smtp-card -->
 
+            <?php wpmm_tip_card(); ?>
         </div>
     </div>
     <?php

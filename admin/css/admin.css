@@ -1363,24 +1363,21 @@
 }
 
 /* ── Tip card (v1.5.1) ───────────────────────────────────────────────────── */
-.wpmm-tip-card-wrap {
-    max-width: 900px;
-    margin: 24px auto 32px;
-    padding: 0 20px;
+.wpmm-tip-card {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    border-color: #fde68a !important;
+    margin-top: 28px !important;
+    margin-bottom: 0 !important;
 }
 
-.wpmm-tip-card {
+.wpmm-tip-inner {
     display: flex;
     align-items: flex-start;
     gap: 16px;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    border: 1px solid #fde68a;
-    border-radius: var(--wpmm-radius);
-    padding: 18px 22px;
 }
 
 .wpmm-tip-coffee {
-    font-size: 32px;
+    font-size: 36px;
     line-height: 1;
     flex-shrink: 0;
     margin-top: 2px;
@@ -1390,18 +1387,11 @@
     flex: 1;
 }
 
-.wpmm-tip-heading {
-    margin: 0 0 4px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #92400e;
-}
-
 .wpmm-tip-text {
-    margin: 0 0 12px;
+    margin: 0 0 14px;
     font-size: 13px;
     color: #78350f;
-    line-height: 1.5;
+    line-height: 1.6;
 }
 
 .wpmm-tip-actions {
@@ -1414,7 +1404,7 @@
 .wpmm-tip-btn {
     display: inline-flex;
     align-items: center;
-    padding: 7px 16px;
+    padding: 8px 18px;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
@@ -1424,6 +1414,7 @@
 .wpmm-tip-btn:hover {
     opacity: .88;
     transform: translateY(-1px);
+    text-decoration: none;
 }
 
 .wpmm-tip-btn-paypal {
@@ -1433,7 +1424,7 @@
 
 .wpmm-tip-venmo {
     font-size: 13px;
-    color: #92400e;
+    color: #78350f;
 }
 
 .wpmm-tip-venmo-handle {
