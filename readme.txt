@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.5.9
+Stable tag:        1.5.9.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -311,6 +311,103 @@ The App Password method above works identically for Workspace accounts. Alternat
 
 == Changelog ==
 
+= 1.5.9.1 =
+* Changelog updated to include all versions from 1.5.1 through 1.5.9 which
+  were missing from previous releases. No functional code changes.
+
+= 1.5.9 =
+* Feature: REST API spoke endpoints (smm/v1 namespace) enabling a remote hub
+  site to manage updates, fetch logs, and send reports without a WordPress login.
+* Six endpoints: GET /status, GET /updates, POST /update, GET /log,
+  POST /send-report, POST /rotate-key.
+* Authentication via X-SMM-API-Key header with hash_equals() comparison.
+* New Remote API Access card in Settings for generating, copying, rotating,
+  and revoking the API key, with a full endpoint reference table shown inline.
+
+= 1.5.8 =
+* Plugin Check compliance (third round) — all remaining warnings resolved.
+* includes/ajax.php: DirectQuery and NoCaching phpcs:ignore annotations moved
+  inline onto the get_results() call lines (were on preceding comment lines).
+* includes/ajax.php: manual_entries JSON input now passes through
+  sanitize_text_field(wp_unslash()) before json_decode() to satisfy
+  InputNotSanitized check.
+* admin/admin.php: DirectQuery and NoCaching ignores moved inline onto both
+  branches of the get_results() ternary in wpmm_render_log().
+
+= 1.5.7 =
+* Feature: Update Notes card on the Email Reports page.
+* Administrators can append a plain-text note to any outgoing maintenance report.
+* The note appears in the email body between the update tables and the footer,
+  inside a styled amber callout box titled "Note from your administrator".
+* Line breaks are preserved. The field is optional — leaving it blank adds
+  nothing to the email.
+
+= 1.5.6 =
+* Feature: Additional Manual Updates repeater on the Email Reports page.
+* Administrators can document plugins or themes updated manually outside the
+  plugin's automated process (e.g. Avada, ACF Pro, Gravity Forms).
+* Each repeater row has a plugin/theme dropdown (auto-fills current version),
+  a Previous Version field, and an Updated To field.
+* Manual entries are included as a fourth section in the email body titled
+  "Additional Manual Updates" with a styled table matching Core/Plugins/Themes.
+* Manual entries are composed fresh on each send and not stored in the database.
+
+= 1.5.5 =
+* Critical fix: plugins like Advanced Custom Fields PRO and Gravity Forms were
+  being deactivated after a successful update.
+* Root cause: when a premium plugin's update transient entry was missing,
+  the code called Plugin_Upgrader::install() which internally calls
+  deactivate_plugins() as part of a fresh-install flow.
+* Fix: replaced install() with a transient-injection approach — a synthetic
+  entry containing the package URL is inserted, upgrade() is called instead,
+  and the entry is cleaned up after. upgrade() preserves plugin active state.
+* Same fix applied to the equivalent fallback branch in the theme update path.
+
+= 1.5.4 =
+* Plugin Check compliance (second round) — all remaining warnings resolved.
+* includes/db.php: phpcs:ignore added inline on the ALTER TABLE query() call
+  for NotPrepared, DirectQuery, NoCaching, and UnescapedDBParameter.
+* includes/ajax.php: phpcs:ignore comments moved to inline on every individual
+  $_POST read line; DirectQuery/NoCaching ignores added to all get_row(),
+  get_results(), and get_col() calls.
+* includes/ajax.php: DirectQuery ignore added to wpdb->insert() in email log.
+* admin/admin.php: UnescapedDBParameter added to Dashboard get_row() ignore;
+  NonceVerification.Recommended ignores moved to per-line inline comments;
+  UnescapedDBParameter added to Update Log get_results() both branches;
+  Email Reports get_results() ignore restructured to target exact lines.
+
+= 1.5.3 =
+* Fix: jQuery UI datepicker calendar on the Email Reports page was rendering
+  transparent (no background, no borders, no text colour).
+* Root cause: a previous Plugin Check fix replaced the external jQuery UI CDN
+  stylesheet with wp-jquery-ui-dialog, which only loads dialog styles, not
+  datepicker styles.
+* Fix: full datepicker styles are now written directly into admin.css. No
+  external CDN and no dependency on WordPress bundled handles that may only
+  include a subset of jQuery UI components.
+
+= 1.5.2 =
+* Fix: duplicate tip card on the Update Log page removed. Each of the five
+  plugin pages now has exactly one tip card call.
+* Fix: tip card missing from Email Reports page restored.
+* Fix: margin above the tip card was not rendering at the updated value because
+  browsers were serving a cached stylesheet. Version bump to 1.5.2 forces the
+  browser to download the updated admin.css (via ?ver= query string change).
+
+= 1.5.1 =
+* Feature: Report Week-Ending Date picker moved from Dashboard to Email Reports
+  page. Selecting a date appends "for week of: [date]" to the subject line.
+  A Clear Date link removes it. The subject field remains fully editable.
+* Feature: Progress bar replaces the spinning arrow on the Updates page.
+  The bar fills from 0% to 100% as each item completes, with a live text line
+  showing each item name as it finishes. Holds at 100% for 600ms before the
+  success banner appears.
+* Fix: success banner no longer persists when returning to the Updates page
+  after a completed session. When a new scan finds available updates, the
+  banner from the previous session is automatically cleared.
+* Feature: Tip card added to all five plugin pages (Dashboard, Updates, Update
+  Log, Email Reports, Settings). Amber-styled card with PayPal and Venmo links.
+
 = 1.5.0 =
 **WordPress.org Plugin Check compliance pass**
 
@@ -466,6 +563,10 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 * 24-entry error code dictionary with plain-English explanations.
 
 == Upgrade Notice ==
+
+= 1.5.9.1 =
+Changelog-only update. No functional changes.
+
 
 = 1.5.0 =
 WordPress.org Plugin Check compliance fixes. No database or functional changes.

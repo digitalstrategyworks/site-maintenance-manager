@@ -1,6 +1,6 @@
 # Site Maintenance Manager
 
-**Version:** 1.5.9  
+**Version:** 1.5.9.1  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Requires WordPress:** 5.8+  
@@ -474,6 +474,55 @@ The email template is defined in `includes/email.php`. It uses inline styles for
 ---
 
 ## Changelog
+
+### 1.5.9.1
+- Changelog updated with all versions 1.5.1–1.5.9 that were missing. No code changes.
+
+### 1.5.9
+- Feature: REST API spoke endpoints (smm/v1) for remote hub management
+- Six endpoints: GET /status, GET /updates, POST /update, GET /log, POST /send-report, POST /rotate-key
+- API key authentication via X-SMM-API-Key header
+- Remote API Access card in Settings with key management and endpoint reference
+
+### 1.5.8
+- Plugin Check compliance (third round): phpcs:ignore annotations moved inline on all direct DB call lines
+- manual_entries JSON sanitized before json_decode()
+
+### 1.5.7
+- Feature: Update Notes card on Email Reports page — append an admin note to any report email
+
+### 1.5.6
+- Feature: Additional Manual Updates repeater on Email Reports page
+- Manual entries appear as a fourth section in the email body
+
+### 1.5.5
+- Critical fix: premium plugins (ACF Pro, Gravity Forms) no longer deactivated after update
+- Replaced Plugin_Upgrader::install() with transient-injection + upgrade() to preserve active state
+
+### 1.5.4
+- Plugin Check compliance (second round): inline phpcs:ignore on all direct DB call lines
+
+### 1.5.3
+- Fix: datepicker calendar on Email Reports page was rendering transparent
+- Full jQuery UI datepicker CSS added to admin.css, removing external CDN dependency
+
+### 1.5.2
+- Fix: duplicate tip card on Update Log page removed
+- Fix: tip card restored on Email Reports page; version bump to bust CSS cache
+
+### 1.5.1
+- Feature: Report Week-Ending Date picker moved to Email Reports page
+- Feature: Full-width progress bar replaces spinning arrow on Updates page
+- Fix: success banner no longer persists when new updates are available
+- Feature: Tip card added to all five plugin pages (PayPal + Venmo)
+
+### 1.5.0
+- WordPress.org Plugin Check compliance: all errors and warnings resolved
+- Replaced external jQuery UI CSS with WordPress bundled version
+- Added wp_unslash() to all $_GET and $_POST reads
+- Replaced bare integer echoes with absint(), wrapped HTML output in wp_kses_post()
+- Replaced unconditional error_log() with WP_DEBUG-gated trigger_error()
+- readme.txt: tags ≤ 5, short description ≤ 150 chars, Description ≤ 2500 chars
 
 ### 1.4.5
 - Added Gmail / Google Workspace SMTP (smtp.gmail.com:587, App Password required)
