@@ -1395,4 +1395,112 @@ jQuery(function ($) {
     })();
 
 
+    // =========================================================================
+    // SPAM LOG PAGE
+    // =========================================================================
+    (function () {
+        var $table = $('#wpmm-spam-table');
+        if ( !$table.length ) return;
+
+        var $msg = $('#wpmm-spam-action-msg');
+
+        function showMsg( text, ok ) {
+            $msg.html('<span style="color:' + (ok ? '#16a34a' : '#dc2626') + ';">' + text + '</span>');
+            setTimeout(function () { $msg.html(''); }, 4000);
+        }
+
+        // Select all checkbox
+        $(document).on('change', '#wpmm-spam-select-all', function () {
+            $table.find('.wpmm-spam-cb').prop('checked', $(this).is(':checked'));
+        });
+
+        // Apply filters — rebuild URL with filter params
+        $(document).on('click', '#wpmm-spam-apply-filters', function () {
+            var rule = $('#wpmm-spam-filter-rule').val();
+            var ip   = $('#wpmm-spam-filter-ip').val().trim();
+            var url  = new URL( window.location.href );
+            url.searchParams.set('paged', '1');
+            if (rule) { url.searchParams.set('rule', rule); }
+            else       { url.searchParams.delete('rule'); }
+            if (ip)   { url.searchParams.set('ip', ip); }
+            else       { url.searchParams.delete('ip'); }
+            window.location.href = url.toString();
+        });
+
+        // Delete selected rows
+        $(document).on('click', '#wpmm-spam-delete-selected', function () {
+            var ids = $table.find('.wpmm-spam-cb:checked').map(function () {
+                return $(this).val();
+            }).get();
+            if (!ids.length) { showMsg('No rows selected.', false); return; }
+            if (!window.confirm('Delete ' + ids.length + ' selected entr' + (ids.length === 1 ? 'y' : 'ies') + '?')) return;
+
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_delete_spam_entries',
+                nonce:  wpmm.nonce,
+                ids:    ids
+            }).done(function (res) {
+                if (res && res.success) {
+                    ids.forEach(function (id) {
+                        $table.find('tr[data-id="' + id + '"]').remove();
+                    });
+                    showMsg('Deleted ' + ids.length + ' entr' + (ids.length === 1 ? 'y.' : 'ies.'), true);
+                } else {
+                    showMsg('Delete failed.', false);
+                }
+            }).fail(function () { showMsg('Request failed.', false); });
+        });
+
+        // Delete single row
+        $(document).on('click', '.wpmm-spam-delete-row', function () {
+            var id  = $(this).data('id');
+            var $tr = $(this).closest('tr');
+            if (!window.confirm('Delete this entry?')) return;
+
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_delete_spam_entries',
+                nonce:  wpmm.nonce,
+                ids:    [id]
+            }).done(function (res) {
+                if (res && res.success) { $tr.remove(); showMsg('Entry deleted.', true); }
+                else { showMsg('Delete failed.', false); }
+            }).fail(function () { showMsg('Request failed.', false); });
+        });
+
+        // Clear all
+        $(document).on('click', '#wpmm-spam-clear-all', function () {
+            if (!window.confirm('Delete ALL spam log entries? This cannot be undone.')) return;
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_clear_spam_log',
+                nonce:  wpmm.nonce
+            }).done(function (res) {
+                if (res && res.success) {
+                    showMsg('Spam log cleared. Reloading…', true);
+                    setTimeout(function () { location.reload(); }, 1200);
+                } else { showMsg('Clear failed.', false); }
+            }).fail(function () { showMsg('Request failed.', false); });
+        });
+
+        // Add IP to blocklist
+        $(document).on('click', '.wpmm-spam-blocklist-ip', function () {
+            var $btn = $(this);
+            var ip   = $btn.data('ip');
+            $btn.prop('disabled', true);
+            $.post(wpmm.ajax_url, {
+                action: 'wpmm_blocklist_ip',
+                nonce:  wpmm.nonce,
+                ip:     ip
+            }).done(function (res) {
+                $btn.prop('disabled', false);
+                if (res && res.success) { showMsg(res.data.message, true); }
+                else { showMsg('Failed: ' + (res.data || 'unknown error'), false); }
+            }).fail(function () {
+                $btn.prop('disabled', false);
+                showMsg('Request failed.', false);
+            });
+        });
+
+    })();
+
+
 }); // end jQuery ready

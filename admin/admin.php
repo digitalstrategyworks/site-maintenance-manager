@@ -15,6 +15,7 @@ define( 'WPMM_SLUG_UPDATES',    'wpmm-updates' );
 define( 'WPMM_SLUG_LOG',        'wpmm-update-log' );
 define( 'WPMM_SLUG_EMAIL',      'wpmm-email-reports' );
 define( 'WPMM_SLUG_SETTINGS',   'wpmm-settings' );
+define( 'WPMM_SLUG_SPAM',        'wpmm-spam-log' );
 
 // =========================================================================
 // Menu registration helpers
@@ -84,6 +85,14 @@ function wpmm_build_menus( $cap ) {
 
     $hooks[] = add_submenu_page(
         WPMM_SLUG_PARENT,
+        'Maintenance Manager — Spam Log',
+        'Spam Log',
+        $cap,
+        WPMM_SLUG_SPAM,
+        'wpmm_render_spam_log'
+    );
+    $hooks[] = add_submenu_page(
+        WPMM_SLUG_PARENT,
         'Maintenance Manager — Settings',
         'Settings',
         $cap,
@@ -119,6 +128,7 @@ function wpmm_enqueue_assets( $hook ) {
         WPMM_SLUG_UPDATES,
         WPMM_SLUG_LOG,
         WPMM_SLUG_EMAIL,
+        WPMM_SLUG_SPAM,
         WPMM_SLUG_SETTINGS,
     ];
 
@@ -199,6 +209,7 @@ function wpmm_page_header( $active_slug ) {
         WPMM_SLUG_UPDATES   => [ 'label' => 'Updates',       'icon' => 'update' ],
         WPMM_SLUG_LOG       => [ 'label' => 'Update Log',    'icon' => 'list-view' ],
         WPMM_SLUG_EMAIL     => [ 'label' => 'Email Reports', 'icon' => 'email-alt' ],
+        WPMM_SLUG_SPAM      => [ 'label' => 'Spam Log',      'icon' => 'shield' ],
         WPMM_SLUG_SETTINGS  => [ 'label' => 'Settings',      'icon' => 'admin-settings' ],
     ];
     ?>
@@ -246,6 +257,273 @@ function wpmm_cap_gate() {
         wp_die( esc_html__( 'You do not have permission to access this page.', 'site-maintenance-manager' ) );
     }
 }
+
+// =========================================================================
+// SPAM LOG page
+// =========================================================================
+function wpmm_render_spam_log() {
+    wpmm_cap_gate();
+    global $wpdb;
+
+    $spam_table = $wpdb->prefix . 'wpmm_spam_log';
+    $per_page   = 25;
+    $curr_page  = max( 1, absint( $_GET['paged'] ?? 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    $offset     = ( $curr_page - 1 ) * $per_page;
+
+    // Filters
+    $filter_rule = sanitize_text_field( wp_unslash( $_GET['rule'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    $filter_ip   = sanitize_text_field( wp_unslash( $_GET['ip']   ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+    $where = 'WHERE 1=1';
+    $args  = [];
+    if ( $filter_rule ) {
+        $where  .= ' AND rule = %s';
+        $args[]  = $filter_rule;
+    }
+    if ( $filter_ip ) {
+        $where  .= ' AND author_ip = %s';
+        $args[]  = $filter_ip;
+    }
+
+    if ( $args ) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$spam_table} {$where} ORDER BY blocked_at DESC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+            array_merge( $args, [ $per_page, $offset ] )
+        ) );
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $total = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$spam_table} {$where}", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+            $args
+        ) );
+    } else {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $rows = $wpdb->get_results( $wpdb->prepare(
+            "SELECT * FROM {$spam_table} ORDER BY blocked_at DESC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $per_page, $offset
+        ) );
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$spam_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    }
+
+    // Stats for the summary row
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+    $stats = $wpdb->get_results(
+        "SELECT rule, COUNT(*) AS cnt FROM {$spam_table} GROUP BY rule ORDER BY cnt DESC" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    );
+
+    $total_pages = $total > 0 ? (int) ceil( $total / $per_page ) : 1;
+    $page_url    = wpmm_subpage_url( WPMM_SLUG_SPAM );
+
+    $rule_labels = [
+        'honeypot'       => 'Honeypot',
+        'too_fast'       => 'Too Fast',
+        'blocked_ip'     => 'Blocked IP',
+        'keyword'        => 'Keyword',
+        'too_many_links' => 'Too Many Links',
+        'duplicate'      => 'Duplicate',
+        'akismet'        => 'Akismet',
+    ];
+    $rule_colours = [
+        'honeypot'       => '#7c3aed',
+        'too_fast'       => '#d97706',
+        'blocked_ip'     => '#dc2626',
+        'keyword'        => '#0369a1',
+        'too_many_links' => '#b45309',
+        'duplicate'      => '#4b5563',
+        'akismet'        => '#16a34a',
+    ];
+
+    ?>
+    <div class="wpmm-wrap">
+        <?php wpmm_page_header( WPMM_SLUG_SPAM ); ?>
+        <div class="wpmm-content">
+
+            <!-- Stats summary -->
+            <?php if ( $total > 0 ) : ?>
+            <div class="wpmm-card" style="margin-bottom:16px;">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-chart-bar"></span> Spam Blocked — All Time
+                </h2>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;">
+                    <?php foreach ( $stats as $stat ) : ?>
+                    <div style="background:#f8fafc;border:1px solid var(--wpmm-border);border-radius:6px;padding:10px 16px;min-width:130px;">
+                        <div style="font-size:22px;font-weight:700;color:<?php echo esc_attr( $rule_colours[ $stat->rule ] ?? '#1e3a5f' ); ?>;">
+                            <?php echo absint( $stat->cnt ); ?>
+                        </div>
+                        <div style="font-size:12px;color:var(--wpmm-gray);margin-top:2px;">
+                            <?php echo esc_html( $rule_labels[ $stat->rule ] ?? $stat->rule ); ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                    <div style="background:#f8fafc;border:2px solid var(--wpmm-blue);border-radius:6px;padding:10px 16px;min-width:130px;">
+                        <div style="font-size:22px;font-weight:700;color:var(--wpmm-blue);">
+                            <?php echo absint( $total ); ?>
+                        </div>
+                        <div style="font-size:12px;color:var(--wpmm-gray);margin-top:2px;">Total Blocked</div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Filter bar + bulk actions -->
+            <div class="wpmm-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-shield"></span> Blocked Comment Attempts
+                    <span class="wpmm-badge wpmm-badge-error" style="margin-left:8px;"><?php echo absint( $total ); ?></span>
+                </h2>
+
+                <!-- Filters -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;">
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--wpmm-gray);margin-bottom:4px;">Filter by Rule</label>
+                        <select id="wpmm-spam-filter-rule" class="wpmm-input" style="max-width:180px;">
+                            <option value="">All Rules</option>
+                            <?php foreach ( $rule_labels as $key => $label ) : ?>
+                                <option value="<?php echo esc_attr( $key ); ?>"
+                                    <?php selected( $filter_rule, $key ); ?>>
+                                    <?php echo esc_html( $label ); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:12px;font-weight:600;color:var(--wpmm-gray);margin-bottom:4px;">Filter by IP</label>
+                        <input type="text" id="wpmm-spam-filter-ip" class="wpmm-input"
+                               style="max-width:160px;" placeholder="e.g. 192.168.1.1"
+                               value="<?php echo esc_attr( $filter_ip ); ?>">
+                    </div>
+                    <button type="button" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" id="wpmm-spam-apply-filters">
+                        <span class="dashicons dashicons-filter"></span> Apply
+                    </button>
+                    <?php if ( $filter_rule || $filter_ip ) : ?>
+                        <a href="<?php echo esc_url( $page_url ); ?>"
+                           class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">&times; Clear</a>
+                    <?php endif; ?>
+
+                    <div style="margin-left:auto;display:flex;gap:8px;">
+                        <button type="button" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" id="wpmm-spam-delete-selected"
+                                title="Delete selected rows">
+                            <span class="dashicons dashicons-trash"></span> Delete Selected
+                        </button>
+                        <button type="button" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" id="wpmm-spam-clear-all"
+                                style="color:var(--wpmm-red);border-color:#fca5a5;"
+                                title="Delete all spam log entries">
+                            <span class="dashicons dashicons-trash"></span> Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <div id="wpmm-spam-action-msg" style="margin-bottom:10px;font-size:13px;"></div>
+
+                <?php if ( empty( $rows ) ) : ?>
+                    <div class="wpmm-all-good">
+                        <span class="dashicons dashicons-shield-alt"></span>
+                        <strong>No blocked attempts recorded.</strong><br>
+                        <?php if ( empty( wpmm_get_settings()['spam_filter_enabled'] ) ) : ?>
+                            Enable spam filtering in <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_SETTINGS ) ); ?>">Settings</a> to start logging blocked spam.
+                        <?php else : ?>
+                            Spam filtering is active. Blocked attempts will appear here.
+                        <?php endif; ?>
+                    </div>
+                <?php else : ?>
+
+                <table class="wpmm-table" id="wpmm-spam-table">
+                    <thead>
+                        <tr>
+                            <th style="width:32px;">
+                                <input type="checkbox" id="wpmm-spam-select-all" title="Select all">
+                            </th>
+                            <th>Date / Time</th>
+                            <th>Rule</th>
+                            <th>IP Address</th>
+                            <th>Author</th>
+                            <th>Content Preview</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $rows as $row ) : ?>
+                        <tr data-id="<?php echo absint( $row->id ); ?>"
+                            data-ip="<?php echo esc_attr( $row->author_ip ); ?>">
+                            <td>
+                                <input type="checkbox" class="wpmm-spam-cb" value="<?php echo absint( $row->id ); ?>">
+                            </td>
+                            <td style="white-space:nowrap;font-size:12px;">
+                                <?php echo esc_html( date_i18n( 'M j, Y g:i A', strtotime( $row->blocked_at ) ) ); ?>
+                            </td>
+                            <td>
+                                <span class="wpmm-spam-rule-badge" style="background:<?php echo esc_attr( $rule_colours[ $row->rule ] ?? '#6b7280' ); ?>20;color:<?php echo esc_attr( $rule_colours[ $row->rule ] ?? '#6b7280' ); ?>;border:1px solid <?php echo esc_attr( $rule_colours[ $row->rule ] ?? '#6b7280' ); ?>40;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap;">
+                                    <?php echo esc_html( $rule_labels[ $row->rule ] ?? $row->rule ); ?>
+                                </span>
+                            </td>
+                            <td style="font-size:12px;font-family:monospace;">
+                                <?php echo esc_html( $row->author_ip ); ?>
+                            </td>
+                            <td style="font-size:12px;">
+                                <?php if ( $row->author_name ) : ?>
+                                    <strong><?php echo esc_html( $row->author_name ); ?></strong><br>
+                                <?php endif; ?>
+                                <?php if ( $row->author_email ) : ?>
+                                    <span style="color:var(--wpmm-gray);"><?php echo esc_html( $row->author_email ); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="font-size:12px;color:#374151;max-width:280px;">
+                                <?php
+                                $preview = wp_strip_all_tags( $row->comment_content ?? '' );
+                                echo esc_html( mb_strlen( $preview ) > 120 ? mb_substr( $preview, 0, 120 ) . '…' : $preview );
+                                ?>
+                            </td>
+                            <td style="white-space:nowrap;">
+                                <?php if ( $row->author_ip ) : ?>
+                                <button type="button"
+                                        class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm wpmm-spam-blocklist-ip"
+                                        data-ip="<?php echo esc_attr( $row->author_ip ); ?>"
+                                        title="Add this IP to the blocklist">
+                                    <span class="dashicons dashicons-shield-alt"></span> Block IP
+                                </button>
+                                <?php endif; ?>
+                                <button type="button"
+                                        class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm wpmm-spam-delete-row"
+                                        data-id="<?php echo absint( $row->id ); ?>"
+                                        style="color:var(--wpmm-red);border-color:#fca5a5;"
+                                        title="Delete this entry">
+                                    <span class="dashicons dashicons-trash"></span>
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <?php if ( $total_pages > 1 ) : ?>
+                <div class="wpmm-pagination" style="margin-top:16px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <?php if ( $curr_page > 1 ) : ?>
+                        <a href="<?php echo esc_url( add_query_arg( [ 'paged' => $curr_page - 1, 'rule' => $filter_rule, 'ip' => $filter_ip ], $page_url ) ); ?>"
+                           class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">&laquo; Previous</a>
+                    <?php endif; ?>
+                    <span style="font-size:13px;color:var(--wpmm-gray);">
+                        Page <?php echo absint( $curr_page ); ?> of <?php echo absint( $total_pages ); ?>
+                        &mdash; <?php echo absint( $total ); ?> entries
+                    </span>
+                    <?php if ( $curr_page < $total_pages ) : ?>
+                        <a href="<?php echo esc_url( add_query_arg( [ 'paged' => $curr_page + 1, 'rule' => $filter_rule, 'ip' => $filter_ip ], $page_url ) ); ?>"
+                           class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm">Next &raquo;</a>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+
+                <?php endif; // empty rows ?>
+
+            </div><!-- .wpmm-card -->
+
+            <?php wpmm_tip_card(); ?>
+        </div><!-- .wpmm-content -->
+    </div><!-- .wpmm-wrap -->
+    <?php
+}
+
 
 // =========================================================================
 // Tip card — call wpmm_tip_card() inside any page's .wpmm-content div
@@ -400,6 +678,16 @@ function wpmm_render_dashboard() {
                     <strong>Settings</strong>
                     <span>Logo, company name, client email, administrator</span>
                 </a>
+                <?php
+                $s_spam = wpmm_get_settings();
+                if ( ! empty( $s_spam['spam_filter_enabled'] ) ) :
+                ?>
+                <a href="<?php echo esc_url( wpmm_subpage_url( WPMM_SLUG_SPAM ) ); ?>" class="wpmm-tile">
+                    <span class="dashicons dashicons-shield"></span>
+                    <strong>Spam Log</strong>
+                    <span>Review blocked comment attempts and manage the IP blocklist</span>
+                </a>
+                <?php endif; ?>
             </div>
 
             <?php wpmm_tip_card(); ?>

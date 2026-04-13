@@ -142,7 +142,7 @@ function wpmm_filter_comment( $comment_data ) {
 
     // 1a. Honeypot — bot filled the hidden field.
     if ( ! empty( $_POST['wpmm_website_url'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        wpmm_spam_die( 'honeypot' );
+        wpmm_spam_die( 'honeypot', $comment_data );
     }
 
     // 1b. Submission time — comment submitted impossibly fast.
@@ -155,7 +155,7 @@ function wpmm_filter_comment( $comment_data ) {
         if ( $ts_submitted > 0 ) {
             $elapsed = time() - $ts_submitted;
             if ( $elapsed < $min_time ) {
-                wpmm_spam_die( 'too_fast' );
+                wpmm_spam_die( 'too_fast', $comment_data );
             }
         }
     }
@@ -169,7 +169,7 @@ function wpmm_filter_comment( $comment_data ) {
     // 1c. IP blocklist.
     $ip_list = wpmm_parse_list( $s['spam_ip_blocklist'] ?? '' );
     if ( $ip && in_array( $ip, $ip_list, true ) ) {
-        wpmm_spam_die( 'blocked_ip' );
+        wpmm_spam_die( 'blocked_ip', $comment_data );
     }
 
     // 1d. Keyword blocklist — checks content, author name, and URL.
@@ -177,7 +177,7 @@ function wpmm_filter_comment( $comment_data ) {
     $haystack = strtolower( $content . ' ' . $author . ' ' . $url );
     foreach ( $keywords as $kw ) {
         if ( $kw !== '' && strpos( $haystack, strtolower( $kw ) ) !== false ) {
-            wpmm_spam_die( 'keyword' );
+            wpmm_spam_die( 'keyword', $comment_data );
         }
     }
 
@@ -186,7 +186,7 @@ function wpmm_filter_comment( $comment_data ) {
     if ( $max_links > 0 ) {
         $link_count = substr_count( strtolower( $content ), 'http' );
         if ( $link_count > $max_links ) {
-            wpmm_spam_die( 'too_many_links' );
+            wpmm_spam_die( 'too_many_links', $comment_data );
         }
     }
 
@@ -203,7 +203,7 @@ function wpmm_filter_comment( $comment_data ) {
             $ip, $content
         ) );
         if ( $dupe ) {
-            wpmm_spam_die( 'duplicate' );
+            wpmm_spam_die( 'duplicate', $comment_data );
         }
     }
 
@@ -215,7 +215,9 @@ function wpmm_filter_comment( $comment_data ) {
         if ( $akismet_key ) {
             $is_spam = wpmm_akismet_check( $akismet_key, $comment_data );
             if ( $is_spam ) {
-                // Mark as spam rather than hard-dying so the admin can review.
+                // Log to our spam log AND mark as spam in WordPress
+                // so it appears both in our Spam Log page and in Comments → Spam.
+                wpmm_log_spam( 'akismet', $comment_data );
                 $comment_data['comment_approved'] = 'spam';
             }
         }
@@ -356,6 +358,31 @@ function wpmm_ajax_save_spam_settings() {
 // =========================================================================
 
 /**
+ * Log a blocked comment attempt to wpmm_spam_log.
+ *
+ * @param string $rule         The rule that triggered: honeypot|too_fast|blocked_ip|keyword|too_many_links|duplicate|akismet
+ * @param array  $comment_data The comment data array from WordPress.
+ */
+function wpmm_log_spam( $rule, $comment_data = [] ) {
+    global $wpdb;
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+    $wpdb->insert(
+        $wpdb->prefix . 'wpmm_spam_log',
+        [
+            'blocked_at'      => current_time( 'mysql' ),
+            'rule'            => sanitize_text_field( $rule ),
+            'author_ip'       => sanitize_text_field( $comment_data['comment_author_IP']    ?? ( $_SERVER['REMOTE_ADDR'] ?? '' ) ), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+            'author_name'     => sanitize_text_field( $comment_data['comment_author']       ?? '' ),
+            'author_email'    => sanitize_email(      $comment_data['comment_author_email'] ?? '' ),
+            'author_url'      => esc_url_raw(         $comment_data['comment_author_url']   ?? '' ),
+            'comment_content' => sanitize_textarea_field( $comment_data['comment_content']  ?? '' ),
+            'post_id'         => absint( $comment_data['comment_post_ID'] ?? 0 ),
+        ],
+        [ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' ]
+    );
+}
+
+/**
  * Parse a newline-separated list into a trimmed array, dropping blanks.
  */
 function wpmm_parse_list( $raw ) {
@@ -366,9 +393,13 @@ function wpmm_parse_list( $raw ) {
 }
 
 /**
- * Hard-stop a comment submission identified as spam.
+ * Log and hard-stop a comment submission identified as spam.
+ *
+ * @param string $reason       Rule code that triggered the block.
+ * @param array  $comment_data Comment data for logging.
  */
-function wpmm_spam_die( $reason = 'spam' ) {
+function wpmm_spam_die( $reason = 'spam', $comment_data = [] ) {
+    wpmm_log_spam( $reason, $comment_data );
     $messages = [
         'honeypot'       => 'Your comment could not be posted.',
         'too_fast'       => 'You are submitting too quickly. Please wait a moment and try again.',
@@ -383,4 +414,72 @@ function wpmm_spam_die( $reason = 'spam' ) {
         esc_html__( 'Comment Blocked', 'site-maintenance-manager' ),
         [ 'response' => 403, 'back_link' => true ]
     );
+}
+
+// =========================================================================
+// AJAX: Delete spam log entries
+// =========================================================================
+add_action( 'wp_ajax_wpmm_delete_spam_entries', 'wpmm_ajax_delete_spam_entries' );
+function wpmm_ajax_delete_spam_entries() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+
+    global $wpdb;
+    $ids = array_map( 'absint', (array) ( $_POST['ids'] ?? [] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( empty( $ids ) ) {
+        wp_send_json_error( 'No IDs provided.' );
+    }
+
+    $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.NotPrepared
+    $deleted = $wpdb->query(
+        $wpdb->prepare( "DELETE FROM {$wpdb->prefix}wpmm_spam_log WHERE id IN ({$placeholders})", $ids ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+    );
+
+    wp_send_json_success( [ 'deleted' => $deleted ] );
+}
+
+// =========================================================================
+// AJAX: Delete ALL spam log entries
+// =========================================================================
+add_action( 'wp_ajax_wpmm_clear_spam_log', 'wpmm_ajax_clear_spam_log' );
+function wpmm_ajax_clear_spam_log() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+    global $wpdb;
+    // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+    $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}wpmm_spam_log" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+    wp_send_json_success( 'Spam log cleared.' );
+}
+
+// =========================================================================
+// AJAX: Add IP to blocklist from spam log
+// =========================================================================
+add_action( 'wp_ajax_wpmm_blocklist_ip', 'wpmm_ajax_blocklist_ip' );
+function wpmm_ajax_blocklist_ip() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+
+    $ip = sanitize_text_field( wp_unslash( $_POST['ip'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+    if ( ! $ip ) {
+        wp_send_json_error( 'No IP provided.' );
+    }
+
+    $s        = wpmm_get_settings();
+    $existing = wpmm_parse_list( $s['spam_ip_blocklist'] ?? '' );
+
+    if ( ! in_array( $ip, $existing, true ) ) {
+        $existing[] = $ip;
+        $s['spam_ip_blocklist'] = implode( "\n", $existing );
+        wpmm_save_settings( $s );
+        wp_send_json_success( [ 'message' => $ip . ' added to IP blocklist.' ] );
+    } else {
+        wp_send_json_success( [ 'message' => $ip . ' is already in the IP blocklist.' ] );
+    }
 }

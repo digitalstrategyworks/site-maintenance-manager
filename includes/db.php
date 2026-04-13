@@ -57,6 +57,23 @@ function wpmm_create_tables() {
         PRIMARY KEY (id)
     ) {$charset};" );
 
+    // ── wpmm_spam_log ─────────────────────────────────────────────────────────
+    $spam_table = $wpdb->prefix . 'wpmm_spam_log';
+    dbDelta( "CREATE TABLE IF NOT EXISTS {$spam_table} (
+        id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        blocked_at      DATETIME        NOT NULL,
+        rule            VARCHAR(50)     NOT NULL DEFAULT '',
+        author_ip       VARCHAR(100)    NOT NULL DEFAULT '',
+        author_name     VARCHAR(255)    NOT NULL DEFAULT '',
+        author_email    VARCHAR(255)    NOT NULL DEFAULT '',
+        author_url      VARCHAR(500)    NOT NULL DEFAULT '',
+        comment_content TEXT,
+        post_id         BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        PRIMARY KEY (id),
+        KEY blocked_at (blocked_at),
+        KEY author_ip  (author_ip)
+    ) {$charset};" );
+
     // ── Column upgrade paths ──────────────────────────────────────────────────
     // Add any column that might be missing from installs that predate its addition.
     // Each ALTER is guarded individually so one failure does not block others.

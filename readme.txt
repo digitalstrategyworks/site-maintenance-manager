@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.6.0
+Stable tag:        1.7.0
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -366,6 +366,22 @@ The App Password method above works identically for Workspace accounts. Alternat
 
 == Changelog ==
 
+= 1.7.0 =
+* Feature: Spam Log page — sixth page under the Site Maintenance menu.
+* All locally-blocked comment attempts are now logged to a new
+  wpmm_spam_log database table (blocked_at, rule, IP, author name,
+  author email, author URL, content, post ID).
+* Akismet-caught spam is also logged to the same table for unified
+  visibility alongside WordPress's native Comments → Spam queue.
+* Spam Log page shows a stats summary (blocked count per rule), a
+  paginated and filterable table of all blocked attempts, and per-row
+  actions: Block IP (adds to Settings blocklist) and Delete.
+* Bulk delete selected rows and Clear All button.
+* Filter by rule type or IP address.
+* Dashboard quick-nav tile for Spam Log shown when spam filtering is
+  enabled.
+* All-time blocked counts per rule shown on the Spam Log stats card.
+
 = 1.6.0 =
 * Feature: Spam Filter & Comments card in Settings.
 * Layer 1 — Local filtering (always active when spam filter is on): honeypot
@@ -635,6 +651,9 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 * 24-entry error code dictionary with plain-English explanations.
 
 == Upgrade Notice ==
+
+= 1.7.0 =
+Adds Spam Log page with full blocked-attempt history, stats, and IP blocklist management. Creates a new wpmm_spam_log database table on upgrade.
 
 = 1.6.0 =
 Adds layered comment spam filtering with optional Akismet integration, and a Disable Comments toggle. No database changes.
