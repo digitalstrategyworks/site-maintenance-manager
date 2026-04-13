@@ -31,6 +31,7 @@ Site Maintenance Manager is a professional WordPress maintenance plugin for deve
 
 * Layer 1 — Local filtering (always active): honeypot hidden field, submission time check, link count limit, keyword blocklist, IP blocklist, duplicate comment detection
 * Layer 2 — Akismet cloud filtering (optional): enter your Akismet API key to enable AI-powered spam detection. Automatically skipped when the standalone Akismet plugin is active
+* Spam Log page: review every blocked comment attempt — filter by rule or IP, add offending IPs to the blocklist with one click, and bulk-delete entries
 * Disable Comments: remove comment support from all post types and hide the Comments admin menu site-wide
 
 **Important — Akismet licensing:** Akismet is free for personal, non-commercial sites only. Any commercial or client site requires a paid Akismet plan available at [akismet.com/plans](https://akismet.com/plans/). Site Maintenance Manager provides the integration; you are responsible for having a valid Akismet licence appropriate for your site's use.
@@ -86,6 +87,15 @@ Web developers, digital agencies, and WordPress administrators who manage client
 3. Confirm the recipient email (pre-filled from Settings) and edit the subject line if needed.
 4. Click **Send Report Email**.
 5. The sent email appears in the **Sent Email History** table below.
+
+= Using the Spam Log =
+
+1. Go to **Site Maintenance → Spam Log**.
+2. The stats card at the top shows how many attempts each rule has blocked since activation.
+3. The table lists every blocked attempt with date, rule, IP address, author details, and a content preview.
+4. Click **Block IP** next to any row to add that IP to the blocklist in Settings immediately.
+5. Use the **Rule** and **IP** filters to narrow the list. Click **Apply** to filter; **×&nbsp;Clear** to reset.
+6. Check individual rows and click **Delete Selected** to remove entries, or **Clear All** to wipe the entire log.
 
 = Previewing a Sent Email =
 
@@ -145,12 +155,25 @@ Yes. Passwords and API keys are encrypted with AES-256-CBC before being saved to
 
 = Where is the plugin data stored? =
 
-Two custom database tables per site:
+Three custom database tables per site:
 * `{prefix}_wpmm_update_log` — one row per update action (session_id, item_name, item_type, item_slug, old_version, new_version, status, error_code, message, updated_at)
 * `{prefix}_wpmm_email_log` — one row per email send (session_id, to_email, subject, body, status, sent_at)
+* `{prefix}_wpmm_spam_log` — one row per blocked comment attempt (rule, author_ip, author_name, author_email, author_url, comment_content, post_id, blocked_at)
 
-Plugin settings (branding, SMTP, client email, default admin) are stored in the `wpmm_settings` WordPress option.
+Plugin settings (branding, SMTP, spam filter configuration, client email, default admin, API key) are stored in the `wpmm_settings` WordPress option.
 
+
+
+= Can I review blocked spam comments? =
+
+Yes. Go to **Site Maintenance → Spam Log**. Every comment attempt blocked by
+any local filter rule (honeypot, time check, keyword, IP, link count, duplicate)
+is logged there with the author's IP, name, email, and a content preview. Akismet-
+blocked comments are logged here too and also appear in WordPress's native
+Comments → Spam queue.
+
+From the Spam Log you can: filter by rule or IP, add an IP to the blocklist
+with one click, delete individual entries, or clear the entire log.
 
 = Does the spam filter work without an Akismet API key? =
 
@@ -192,9 +215,7 @@ custom ones.
 
 = How do I add an IP address to the blocklist after catching a spammer? =
 
-Go to **Settings → Spam Filter & Comments** and add the IP address to the
-Blocked IP Addresses textarea, one per line. Click **Save Spam Settings**. Future
-comments from that IP will be blocked before any other check runs.
+Two ways to add an IP. From the **Spam Log** page, click the **Block IP** button on any row — the IP is added to the blocklist instantly without leaving the page. Alternatively go to **Settings → Spam Filter & Comments**, add the address to the Blocked IP Addresses textarea (one per line), and click **Save Spam Settings**.
 
 = Can I use this plugin alongside WP Mail SMTP or other SMTP plugins? =
 
@@ -360,9 +381,10 @@ The App Password method above works identically for Workspace accounts. Alternat
 4. **Email Reports** — Send form with subject line builder, Report Week-Ending Date picker, Update Notes textarea, Additional Manual Updates repeater, and Sent Email History table with preview modal and resend.
 5. **Settings — Company, Client & Administrators** — Logo upload, company name, client email, and Site Administrators table with Gravatar and radio selection.
 6. **Settings — Spam Filter & Comments** — Master spam toggle, Disable Comments toggle, local filtering configuration (min time, max links, keyword blocklist, IP blocklist), and Akismet API key field with verify/revoke.
-7. **Settings — SMTP & Email Delivery** — Provider tile grid with context-sensitive setup instructions and Send Test Email feature.
-8. **Email Preview Modal** — Full rendered HTML email preview inside the WordPress admin.
-9. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
+7. **Spam Log** — All-time stats by rule, paginated blocked-attempt table with filter, Block IP and Delete per row, bulk delete, and Clear All.
+8. **Settings — SMTP & Email Delivery** — Provider tile grid with context-sensitive setup instructions and Send Test Email feature.
+9. **Email Preview Modal** — Full rendered HTML email preview inside the WordPress admin.
+10. **Database Diagnostic** — Expandable panel showing table columns, row counts, and Force DB Upgrade button.
 
 == Changelog ==
 

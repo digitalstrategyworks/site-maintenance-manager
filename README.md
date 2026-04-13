@@ -57,7 +57,7 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 ### Dashboard
 - Status summary cards: last update date/time, client email, default administrator, agency logo and name
 - Weekly report subject line builder with date picker
-- Quick-navigation tiles to all five plugin pages
+- Quick-navigation tiles to all six plugin pages (Spam Log tile appears when spam filtering is enabled)
 
 ### Updates
 - Three separate sections: WordPress Core, Plugins, Themes
@@ -83,6 +83,9 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 - Branded HTML email built automatically from the current update session
 - Email header: Site Name + URL at top; agency logo + company name inline; "WordPress website updates administered by [Admin Name]"
 - Sectioned tables: WordPress Core, Plugins, Themes — each with item name, versions, and status
+- **Update Notes** — optional free-text note appended to the email above the footer
+- **Additional Manual Updates** — repeater field to document plugins updated outside the plugin (e.g. licensed plugins); rendered as a fourth table section in the email
+- **Report Week-Ending Date** picker appends "for week of: [date]" to the subject line
 - Sent Email History with preview modal and resend button
 - Preview and Resend always rebuild the email body from original log entries using the current template
 - Session tracking persists across page navigation (Updates → Email Reports)
@@ -133,6 +136,14 @@ Site Maintenance Manager replaces the ad hoc workflow of tab-switching between t
 - REST API endpoints under `smm/v1` namespace: status, updates, run update, log, send report, rotate key
 - Copy key to clipboard, rotate (invalidates previous key), or revoke entirely
 - Full endpoint reference table shown inline when a key is active
+
+### Spam Log
+- Full history of every blocked comment attempt — locally-filtered and Akismet-blocked
+- All-time stats card showing blocked count per rule (Honeypot, Too Fast, Blocked IP, Keyword, Too Many Links, Duplicate, Akismet)
+- Filter by rule type or IP address
+- Per-row **Block IP** button — adds the IP to the Settings blocklist instantly
+- Per-row **Delete** button; bulk **Delete Selected**; **Clear All**
+- Pagination: 25 entries per page with Previous/Next
 
 ### Avada Theme Support
 - Detects when the Avada theme is installed and shows a contextual update-order notice
@@ -194,7 +205,7 @@ The Dashboard gives you a quick health check of the site maintenance workflow:
 
 The **Weekly Report Configuration** section has a date picker to build the email subject line: `[Site Name] [URL] Weekly WordPress Upgrades and Maintenance for week of: [Date]`.
 
-Quick-navigation tiles link to Updates, Update Log, Email Reports, and Settings.
+Quick-navigation tiles link to Updates, Update Log, Email Reports, Spam Log (when spam filtering is enabled), and Settings.
 
 ---
 
@@ -254,6 +265,22 @@ Clicking a session header expands it to show a table of every item updated in th
 **Preview modal:** The eye icon opens the full rendered email in a modal. Even emails sent months ago will show the current template and branding because the preview rebuilds the body from the original log entries each time.
 
 **Resend:** Rebuilds the email from the original session entries and sends it again. This means resent emails reflect the current template design even if the template has changed since the original send.
+
+---
+
+### Spam Log
+
+All comment attempts blocked by any filter rule are recorded here — locally-filtered and Akismet-blocked alike.
+
+**Reading the stats card:** Shows a count tile per rule type and a Total Blocked tile. These are all-time cumulative counts since spam filtering was activated.
+
+**Filtering the table:** Use the **Rule** dropdown to show only a specific rule's entries. Use the **IP** field to show only entries from one address. Click **Apply** to filter, **× Clear** to reset.
+
+**Block IP:** Clicking **Block IP** on any row adds that IP to the blocklist in Settings immediately. The button gives instant feedback confirming the add (or noting it was already listed).
+
+**Deleting entries:** Check individual rows and click **Delete Selected**, or click **Clear All** to wipe the log. Neither action affects WordPress's Comments screen — it only removes records from the plugin's own spam log table.
+
+**Akismet entries:** Comments caught by Akismet appear in this log with the rule shown as "Akismet". They also continue to appear in **WordPress Admin → Comments → Spam** as they normally would.
 
 ---
 
@@ -496,9 +523,23 @@ The plugin creates two tables per WordPress site (or sub-site on Multisite):
 | `status` | VARCHAR(20) | `sent` or `failed` |
 | `sent_at` | DATETIME | When the email was sent |
 
+### `{prefix}_wpmm_spam_log`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | BIGINT | Primary key |
+| `blocked_at` | DATETIME | When the attempt was blocked |
+| `rule` | VARCHAR(50) | Rule that triggered: `honeypot`, `too_fast`, `blocked_ip`, `keyword`, `too_many_links`, `duplicate`, `akismet` |
+| `author_ip` | VARCHAR(100) | Submitter's IP address |
+| `author_name` | VARCHAR(255) | Comment author name |
+| `author_email` | VARCHAR(255) | Comment author email |
+| `author_url` | VARCHAR(500) | Comment author URL |
+| `comment_content` | TEXT | Comment body (full text) |
+| `post_id` | BIGINT | ID of the post the comment was submitted on |
+
 ### Settings storage
 
-All plugin settings (company name, logo URL, client email, default admin ID, SMTP configuration) are stored as a single serialised array in the `wpmm_settings` WordPress option. The SMTP password/API key is stored AES-256-CBC encrypted.
+All plugin settings (company name, logo URL, client email, default admin ID, SMTP configuration, spam filter configuration, Akismet API key, REST API key) are stored as a single serialised array in the `wpmm_settings` WordPress option. The SMTP password/API key is stored AES-256-CBC encrypted.
 
 ---
 
@@ -514,6 +555,16 @@ All plugin settings (company name, logo URL, client email, default admin ID, SMT
 ---
 
 ## Frequently Asked Questions
+
+### Can I review blocked spam comments?
+
+Yes. Go to **Site Maintenance → Spam Log**. Every comment blocked by any local filter rule is recorded there with the timestamp, rule that triggered, IP address, author details, and a content preview. Akismet-blocked comments are logged here too and also appear in WordPress's native Comments → Spam queue.
+
+From the page you can filter by rule or IP, add an IP to the blocklist with one click, delete individual entries, or clear the entire log.
+
+### Where are spam log entries stored?
+
+In the `{prefix}_wpmm_spam_log` database table, created automatically when the plugin activates or upgrades. Entries are never deleted automatically — use the **Delete Selected** or **Clear All** controls on the Spam Log page to manage storage.
 
 ### Does the spam filter work without an Akismet key?
 
@@ -558,6 +609,21 @@ The email template is defined in `includes/email.php`. It uses inline styles for
 ---
 
 ## Changelog
+
+### 1.7.0
+- Feature: Spam Log page — full history of all blocked comment attempts
+- New `wpmm_spam_log` database table stores every blocked attempt with rule, IP, author details, and content
+- Akismet-blocked comments also logged for unified visibility
+- Stats card, paginated filterable table, Block IP button, Delete, bulk delete, Clear All
+- Dashboard Spam Log tile shown when spam filtering is active
+- Bug fix: WPMM_SLUG_SPAM added to enqueue slugs array so plugin CSS/JS loads correctly on Spam Log page
+
+### 1.6.0
+- Feature: Spam Filter & Comments card in Settings
+- Layer 1 local filtering: honeypot, submission time, IP blocklist, keyword blocklist, link count, duplicate detection
+- Layer 2 Akismet cloud filtering: optional API key, verify/revoke, auto-skipped when standalone Akismet plugin is active
+- Disable Comments toggle: removes comment support site-wide with one click
+- Toggle switches with live label updates throughout Settings
 
 ### 1.5.9.1
 - Changelog updated with all versions 1.5.1–1.5.9 that were missing. No code changes.
