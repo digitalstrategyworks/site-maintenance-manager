@@ -129,6 +129,24 @@ jQuery(function ($) {
             modalHide($loading);
             if (res.success && res.data && res.data.body) {
                 $iframe.attr('srcdoc', res.data.body);
+
+                // Auto-resize the iframe to its content height once loaded
+                // so the modal body can scroll the full email without clipping.
+                $iframe[0].onload = function () {
+                    try {
+                        var doc = this.contentDocument || this.contentWindow.document;
+                        var h   = doc.documentElement.scrollHeight
+                               || doc.body.scrollHeight
+                               || 600;
+                        // Add a small buffer so the very last pixel of the
+                        // footer is never flush against the iframe edge.
+                        $(this).css('height', ( h + 32 ) + 'px');
+                    } catch (e) {
+                        // Cross-origin guard — fall back to a tall fixed height.
+                        $(this).css('height', '1200px');
+                    }
+                };
+
                 modalShow($iframe);
             } else {
                 var errMsg = (res.data && typeof res.data === 'string') ? res.data : 'Unknown error';

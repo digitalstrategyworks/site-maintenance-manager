@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.9.1.2
+Stable tag:        1.9.1.3
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -574,6 +574,16 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 1.9.1.3 =
+* Fix: Email preview modal was cutting off body content at the footer.
+  The modal body now scrolls the full email. Root causes were overflow:hidden
+  on the modal body container, and the iframe having no mechanism to expand
+  to its content height. The modal body is now overflow-y:auto and the iframe
+  auto-resizes to its full content height after load via a JS onload handler.
+* Feature: Greenskeeper version number now displayed below the logo in the
+  admin header on every plugin page, making it easy to confirm which version
+  is installed without visiting the Plugins screen.
 
 = 1.9.1.2 =
 * Fix: Email report footer was overlapping and cutting off body content

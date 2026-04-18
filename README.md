@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 1.9.1.2  
+**Version:** 1.9.1.3  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -704,6 +704,10 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ---
 
 ## Changelog
+
+### 1.9.1.3
+- Fix: Email preview modal cuts off content at the footer — modal body now scrolls full email height via iframe auto-resize
+- Feature: Version number displayed below Greenskeeper logo in admin header
 
 ### 1.9.1.2
 - Fix: Email report footer overlapping and cutting off body content (update tables, external updates, spam activity, admin notes)

@@ -223,10 +223,13 @@ function wpmm_page_header( $active_slug ) {
         <!-- Row 1: Greenskeeper product logo left, site name/URL right -->
         <div class="wpmm-header-row wpmm-header-row-primary"
              style="display:flex;flex-direction:row;align-items:center;width:100%;gap:14px;padding-bottom:10px;">
-            <img src="<?php echo esc_url( WPMM_PLUGIN_URL . 'admin/images/greenskeeper-logo.png?v=' . WPMM_VERSION ); ?>"
-                 alt="Greenskeeper"
-                 width="140" height="42"
-                 style="height:42px;width:auto;max-width:200px;display:block;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
+                <img src="<?php echo esc_url( WPMM_PLUGIN_URL . 'admin/images/greenskeeper-logo.png?v=' . WPMM_VERSION ); ?>"
+                     alt="Greenskeeper"
+                     width="140" height="42"
+                     style="height:42px;width:auto;max-width:200px;display:block;">
+                <span style="font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.04em;padding-left:1px;">v<?php echo esc_html( WPMM_VERSION ); ?></span>
+            </div>
             <div style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;color:#93c5fd;flex-wrap:wrap;justify-content:flex-end;">
                 <span><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
                 <span style="color:rgba(147,197,253,.4);">&mdash;</span>
