@@ -322,8 +322,7 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
     if ( ! empty( $update_note ) ) {
         $note_lines = nl2br( esc_html( $update_note ) );
         $update_note_block = '
-    <!-- NOTE -->
-    <div style="padding:24px 36px 0;">
+    <div style="margin-top:28px;">
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:18px 22px;">
         <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;">Note from your administrator</p>
         <p style="margin:0;font-size:14px;color:#78350f;line-height:1.7;">' . $note_lines . '</p>
@@ -350,19 +349,19 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
       ' . $administered_by . '
     </div>
 
-    <!-- BODY -->
-    <div style="padding:32px 36px;">
+    <!-- BODY — padding-bottom is intentionally generous so the last section
+         never collides with the footer regardless of content length. -->
+    <div style="padding:32px 36px 48px;">
       <h2 style="color:#1e3a5f;margin:0 0 6px;font-size:18px;font-family:Georgia,serif;">Weekly WordPress Maintenance Report</h2>
       <p style="color:#6b7280;font-size:13px;margin:0 0 4px;">The following updates were performed on your site.</p>
       ' . $sections . '
       ' . $external_section . '
       ' . $spam_section . '
+      ' . $update_note_block . '
     </div>
 
-    ' . ( $update_note_block ) . '
-
-    <!-- FOOTER -->
-    <div style="background:#f8fafc;padding:18px 36px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#9ca3af;">
+    <!-- FOOTER — separated from body by a full border-top; never overlaps content -->
+    <div style="background:#f8fafc;padding:20px 36px;border-top:2px solid #e5e7eb;text-align:center;font-size:12px;color:#9ca3af;clear:both;">
       Sent by ' . esc_html( $sender ) . '
       &bull; <a href="' . esc_url( $site_url ) . '" style="color:#9ca3af;">' . esc_html( $site_url ) . '</a>
     </div>

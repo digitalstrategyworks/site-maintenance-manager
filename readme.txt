@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.9.1
+Stable tag:        1.9.1.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -575,6 +575,16 @@ For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
 
+= 1.9.1.1 =
+* Fix: Email report footer was overlapping and cutting off body content
+  (update tables, external updates, spam activity, and administrator notes)
+  when the report contained more than a few entries. The body div now uses
+  a generous padding-bottom and all content sections render fully above the
+  footer regardless of report length.
+* Fix: Administrator Update Notes block was assembled outside the body div,
+  causing it to float between the body and footer in some email clients. The
+  note block is now correctly positioned inside the body div above the footer.
+
 = 1.9.1 =
 * Fix: Theme updates were not appearing in email reports. The item_type
   bucketing in wpmm_build_email_body() now accepts both 'theme' and
@@ -929,11 +939,17 @@ All errors and warnings reported by the Plugin Check plugin have been resolved:
 
 == Upgrade Notice ==
 
+= 1.9.1.1 =
+Fixes email report footer overlapping body content. Update tables, external updates, spam activity, and admin notes now render fully above the footer. Recommended update for all users.
+
 = 1.9.1 =
 Fixes themes missing from email reports, merges Update Notes into the Send card, adds spam activity section to emails, and shows administrator full name. No database changes.
 
 = 1.9.0 =
 Plugin renamed to Greenskeeper. Adds Multisite Site Scope Selector for Updates, Spam Log, and Settings. No database changes. Internal prefixes unchanged — existing data is preserved.
+
+= 1.9.1.1 =
+Fixes email report footer overlapping body content. Update tables, external updates, spam activity, and admin notes now render fully above the footer. Recommended update for all users.
 
 = 1.9.1 =
 Fixes themes missing from email reports, merges Update Notes into the Send card, adds spam activity section to emails, and shows administrator full name. No database changes.
