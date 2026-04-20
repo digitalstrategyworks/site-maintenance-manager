@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.9.3
+Stable tag:        1.9.5
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,29 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 1.9.5 =
+* Feature: Sent Email History now updates instantly via AJAX after a
+  successful send — no page refresh required. The new row is prepended
+  to the top of the history table and briefly highlighted green so it
+  is immediately visible. If no emails have been sent yet (empty state),
+  the table is built dynamically on first send.
+
+= 1.9.4 =
+* Fix: Batch updates on shared hosting environments were failing after the
+  first item with "Request failed. Please try again." The AJAX update call
+  has been switched from $.post() (no timeout control) to $.ajax() with an
+  explicit 120-second timeout per update. Error messages now distinguish
+  between a timeout and a hard HTTP failure.
+* Fix: Added an 800ms delay between sequential updates in a batch run to
+  prevent rapid-fire requests from being throttled or rejected by the server.
+* Fix: Added set_time_limit(300) to the PHP update AJAX handler so long-
+  running plugin updates on slow hosts complete before PHP's execution limit
+  cuts the request off.
+* Note: The "Request failed" errors seen were not caused by PHP errors in
+  the plugin — they were network-level AJAX timeouts. The aioseo-redirects
+  warnings visible in server logs are pre-existing PHP notices from that
+  plugin and are unrelated to Greenskeeper.
 
 = 1.9.3 =
 * Fix: Replaced date() with gmdate() in external update session ID generation

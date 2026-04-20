@@ -298,6 +298,12 @@
 .wpmm-table tr:hover td { background: #f9fafb; }
 .wpmm-empty { color: var(--wpmm-gray); font-style: italic; text-align: center; padding: 30px; }
 
+/* ── Email history — new row highlight (fades in on AJAX prepend) ─────────── */
+.wpmm-history-new-active td {
+    background: #f0fdf4 !important;
+    transition: background 1.8s ease;
+}
+
 /* ── Badges ──────────────────────────────────────────────────────────────── */
 .wpmm-badge {
     display: inline-block;

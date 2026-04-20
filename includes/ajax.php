@@ -20,6 +20,14 @@ function wpmm_ajax_cap_check() {
 function wpmm_ajax_run_update() {
     wpmm_ajax_cap_check();
 
+    // Plugin and theme updates can take 30-60 seconds on slow hosts.
+    // Extend the execution limit for this request only so the update
+    // completes before PHP cuts it off. 0 = no limit (safe in this context
+    // because the request is authenticated and admin-only).
+    if ( function_exists( 'set_time_limit' ) ) {
+        set_time_limit( 300 ); // 5 minutes maximum per individual update
+    }
+
     $type       = sanitize_text_field( wp_unslash( $_POST['item_type']  ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified via wpmm_ajax_cap_check().
     $slug       = sanitize_text_field( wp_unslash( $_POST['item_slug']  ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
     $session_id = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -170,7 +178,19 @@ function wpmm_ajax_send_email() {
     }
 
     if ( $result['success'] ) {
-        wp_send_json_success( [ 'message' => 'Email sent successfully.', 'email_id' => $result['email_id'] ] );
+        // Return enough data for the JS to prepend a new row to the history
+        // table immediately without a page reload.
+        wp_send_json_success( [
+            'message'    => 'Email sent successfully.',
+            'email_id'   => $result['email_id'],
+            'row'        => [
+                'id'      => $result['email_id'],
+                'sent_at' => current_time( 'mysql' ),
+                'to'      => $to,
+                'subject' => $subject,
+                'status'  => 'sent',
+            ],
+        ] );
     } else {
         wp_send_json_error( 'Email failed to send. Check your WordPress mail configuration.' );
     }

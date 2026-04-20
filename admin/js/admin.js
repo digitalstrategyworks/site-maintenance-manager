@@ -415,6 +415,8 @@ jQuery(function ($) {
     // ── Sequential batch runner ────────────────────────────────────────────
     // onProgress(itemName, success) called after each item completes.
     // done() called when all items are finished.
+    // A short delay between items prevents rapid-fire requests from being
+    // throttled or timed out by shared hosting environments.
     function runUpdatesSequential(items, index, onProgress, done) {
         if (index >= items.length) { done(); return; }
         var item = items[index];
@@ -424,7 +426,11 @@ jQuery(function ($) {
         var $btn = $li.find('.wpmm-update-one-btn');
         runSingleUpdate(item.type, item.slug, item.pkg, $li, $btn, function (itemName, success) {
             if (onProgress) { onProgress(itemName, success); }
-            runUpdatesSequential(items, index + 1, onProgress, done);
+            // 800ms breathing room between updates — gives the server time to
+            // fully complete the previous update before the next request lands.
+            setTimeout(function () {
+                runUpdatesSequential(items, index + 1, onProgress, done);
+            }, 800);
         });
     }
 
@@ -436,48 +442,58 @@ jQuery(function ($) {
         );
         $status.html('');
 
-        $.post(wpmm.ajax_url, {
-            action:     'wpmm_run_update',
-            nonce:      wpmm.nonce,
-            item_type:  type,
-            item_slug:  slug,
-            session_id: sessionId,
-            package:    pkg,
-            site_id:    $('#wpmm-scope-site-id').val() || 0
-        }, function (res) {
-            $btn.prop('disabled', false);
-            var itemName = (res.data && res.data.name) ? res.data.name : slug;
-            var success  = res.success && res.data && res.data.status === 'success';
+        $.ajax({
+            url:     wpmm.ajax_url,
+            method:  'POST',
+            timeout: 120000,   // 120s — plugin updates on slow hosts can take a while
+            data: {
+                action:     'wpmm_run_update',
+                nonce:      wpmm.nonce,
+                item_type:  type,
+                item_slug:  slug,
+                session_id: sessionId,
+                package:    pkg,
+                site_id:    $('#wpmm-scope-site-id').val() || 0
+            },
+            success: function (res) {
+                $btn.prop('disabled', false);
+                var itemName = (res.data && res.data.name) ? res.data.name : slug;
+                var success  = res.success && res.data && res.data.status === 'success';
 
-            if (success) {
-                $btn.html('Updated &#10003;')
-                    .addClass('wpmm-btn-success')
-                    .removeClass('wpmm-btn-primary')
-                    .prop('disabled', true);
-                $status.html('<span class="wpmm-status-success">&#9989; Update Successful</span>');
-                $li.find('.wpmm-item-meta').text('Updated to version ' + res.data.new_version);
-            } else {
-                var msg = '';
-                if (res.data && typeof res.data === 'object' && res.data.message) {
-                    msg = res.data.message;
-                } else if (typeof res.data === 'string') {
-                    msg = res.data;
+                if (success) {
+                    $btn.html('Updated &#10003;')
+                        .addClass('wpmm-btn-success')
+                        .removeClass('wpmm-btn-primary')
+                        .prop('disabled', true);
+                    $status.html('<span class="wpmm-status-success">&#9989; Update Successful</span>');
+                    $li.find('.wpmm-item-meta').text('Updated to version ' + res.data.new_version);
                 } else {
-                    msg = 'Update failed.';
+                    var msg = '';
+                    if (res.data && typeof res.data === 'object' && res.data.message) {
+                        msg = res.data.message;
+                    } else if (typeof res.data === 'string') {
+                        msg = res.data;
+                    } else {
+                        msg = 'Update failed.';
+                    }
+                    $btn.html('Retry').removeClass('wpmm-btn-success');
+                    $status.html(
+                        '<span class="wpmm-status-failed">&#10060; Update Failed</span>' +
+                        '<div class="wpmm-status-failed-reason">' + escHtml(msg) + '</div>'
+                    );
                 }
-                $btn.html('Retry').removeClass('wpmm-btn-success');
+                callback(itemName, success);
+            },
+            error: function (xhr, status) {
+                $btn.prop('disabled', false).html('Retry');
+                var msg = status === 'timeout'
+                    ? 'Request timed out. The server may be slow \u2014 click Retry to try again.'
+                    : 'Request failed (HTTP ' + (xhr.status || '?') + '). Please try again.';
                 $status.html(
-                    '<span class="wpmm-status-failed">&#10060; Update Failed</span>' +
-                    '<div class="wpmm-status-failed-reason">' + escHtml(msg) + '</div>'
+                    '<span class="wpmm-status-failed">&#10060; ' + escHtml(msg) + '</span>'
                 );
+                callback(slug, false);
             }
-            callback(itemName, success);
-        }).fail(function () {
-            $btn.prop('disabled', false).html('Retry');
-            $status.html(
-                '<span class="wpmm-status-failed">&#10060; Request failed. Please try again.</span>'
-            );
-            callback(slug, false);
         });
     }
 
@@ -526,7 +542,7 @@ jQuery(function ($) {
             update_note:     updateNote,
             site_id:         $('#wpmm-email-scope-site-id').val() || 0,
             network_all:     ($('#wpmm-email-scope-site-id').length && $('#wpmm-email-scope-site-id').val() == '0') ? 1 : 0
-        }, function (res) {
+        }).then(function (res) {
             $btn.prop('disabled', false)
                 .html('<span class="dashicons dashicons-email"></span> Send Report Email');
             if (res.success) {
@@ -536,6 +552,62 @@ jQuery(function ($) {
                     escHtml(res.data.message) +
                     ' <a href="' + (wpmm.url_log || '#') + '">View log &rarr;</a></div>'
                 );
+
+                // ── Prepend new row to the Sent Email History table ───────────
+                var row = res.data.row;
+                if (row) {
+                    var subj    = row.subject.length > 65 ? row.subject.substring(0, 65) + '\u2026' : row.subject;
+                    var newRow  =
+                        '<tr id="wpmm-email-row-' + row.id + '" class="wpmm-history-new">' +
+                        '<td>' + escHtml(row.sent_at) + '</td>' +
+                        '<td>' + escHtml(row.to) + '</td>' +
+                        '<td>' + escHtml(subj) + '</td>' +
+                        '<td><span class="wpmm-badge wpmm-badge-success">Sent</span></td>' +
+                        '<td style="text-align:center;">' +
+                            '<button class="wpmm-preview-btn" type="button" title="Preview email"' +
+                            ' data-id="' + row.id + '"' +
+                            ' data-subject="' + escHtml(row.subject) + '"' +
+                            ' data-to="' + escHtml(row.to) + '"' +
+                            ' data-sent="' + escHtml(row.sent_at) + '">' +
+                            '<span class="dashicons dashicons-visibility"></span>' +
+                            '</button>' +
+                        '</td>' +
+                        '<td>' +
+                            '<button class="wpmm-btn wpmm-btn-sm wpmm-resend-btn" data-id="' + row.id + '">' +
+                            '<span class="dashicons dashicons-controls-repeat"></span> Resend' +
+                            '</button>' +
+                        '</td>' +
+                        '</tr>';
+
+                    var $tbody = $('#wpmm-email-history-tbody');
+                    if ($tbody.length) {
+                        // Table exists — prepend to the top.
+                        $tbody.prepend(newRow);
+                    } else {
+                        // First ever send — the empty-state placeholder is showing.
+                        // Build the full table and replace the placeholder.
+                        var $empty = $('#wpmm-email-history-empty');
+                        var table  =
+                            '<table class="wpmm-table" id="wpmm-email-history-table">' +
+                            '<thead><tr>' +
+                            '<th>Sent At</th><th>To</th><th>Subject</th>' +
+                            '<th>Status</th>' +
+                            '<th style="text-align:center;">Preview</th>' +
+                            '<th>Resend</th>' +
+                            '</tr></thead>' +
+                            '<tbody id="wpmm-email-history-tbody">' + newRow + '</tbody>' +
+                            '</table>';
+                        $empty.replaceWith(table);
+                    }
+
+                    // Brief highlight so the user sees the new row land.
+                    setTimeout(function () {
+                        $('#wpmm-email-row-' + row.id).addClass('wpmm-history-new-active');
+                        setTimeout(function () {
+                            $('#wpmm-email-row-' + row.id).removeClass('wpmm-history-new-active');
+                        }, 2000);
+                    }, 50);
+                }
             } else {
                 $result.html(
                     '<div class="wpmm-notice wpmm-notice-error">' +

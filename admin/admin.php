@@ -1679,7 +1679,7 @@ function wpmm_render_email() {
                     <span class="dashicons dashicons-backup"></span> Sent Email History
                 </h2>
                 <?php if ( $email_rows ) : ?>
-                <table class="wpmm-table">
+                <table class="wpmm-table" id="wpmm-email-history-table">
                     <thead>
                         <tr>
                             <th>Sent At</th>
@@ -1690,7 +1690,7 @@ function wpmm_render_email() {
                             <th>Resend</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="wpmm-email-history-tbody">
                     <?php foreach ( $email_rows as $email ) : ?>
                         <tr>
                             <td><?php echo esc_html( $email->sent_at ); ?></td>
@@ -1729,7 +1729,7 @@ function wpmm_render_email() {
                     </tbody>
                 </table>
                 <?php else : ?>
-                    <p class="wpmm-empty">No emails have been sent yet.</p>
+                    <p class="wpmm-empty" id="wpmm-email-history-empty">No emails have been sent yet.</p>
                 <?php endif; ?>
             </div>
 
