@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 1.9.5  
+**Version:** 1.9.6  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -704,6 +704,9 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ---
 
 ## Changelog
+
+### 1.9.6
+- **Critical fix:** Premium plugins deactivated after failed updates — package URL now verified before upgrade is attempted
 
 ### 1.9.5
 - Feature: Sent Email History updates instantly via AJAX after send — no page refresh required

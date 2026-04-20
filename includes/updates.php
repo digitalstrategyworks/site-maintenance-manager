@@ -248,32 +248,47 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
                 // calls deactivate_plugins() internally, which would deactivate the
                 // plugin being updated. Using upgrade() preserves activation state.
                 // ──────────────────────────────────────────────────────────────────────
-                $t = get_site_transient( 'update_plugins' );
-                if ( ! $t ) {
-                    $t = new stdClass();
-                }
-                if ( ! isset( $t->response ) || ! is_array( $t->response ) ) {
-                    $t->response = [];
-                }
-                $injected_entry = new stdClass();
-                $injected_entry->id          = $slug;
-                $injected_entry->slug        = dirname( $slug );
-                $injected_entry->plugin      = $slug;
-                $injected_entry->new_version = '';
-                $injected_entry->package     = $pkg_url;
-                $t->response[ $slug ]        = $injected_entry;
-                set_site_transient( 'update_plugins', $t );
 
-                $upgrader = new Plugin_Upgrader( $skin );
-                $result   = $upgrader->upgrade( $slug );
-                list( $status, $new_version, $error_code, $message ) =
-                    wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+                // Safety check: verify the package URL is reachable before attempting
+                // the upgrade. If it returns a non-200 status (e.g. 401 Unauthorized
+                // for a premium plugin whose license key is not available in this
+                // context), WordPress will fail mid-upgrade and call deactivate_plugins()
+                // as part of its rollback. We abort here instead to prevent that.
+                $head = wp_remote_head( $pkg_url, [ 'timeout' => 10, 'redirection' => 5 ] );
+                if ( is_wp_error( $head ) || wp_remote_retrieve_response_code( $head ) >= 400 ) {
+                    $error_code = 'no_package';
+                    $message    = wpmm_explain_error( $error_code )['detail']
+                        . ' (Package URL returned HTTP '
+                        . ( is_wp_error( $head ) ? 'error' : wp_remote_retrieve_response_code( $head ) )
+                        . ' — update aborted to prevent plugin deactivation.)';
+                } else {
+                    $t = get_site_transient( 'update_plugins' );
+                    if ( ! $t ) {
+                        $t = new stdClass();
+                    }
+                    if ( ! isset( $t->response ) || ! is_array( $t->response ) ) {
+                        $t->response = [];
+                    }
+                    $injected_entry = new stdClass();
+                    $injected_entry->id          = $slug;
+                    $injected_entry->slug        = dirname( $slug );
+                    $injected_entry->plugin      = $slug;
+                    $injected_entry->new_version = '';
+                    $injected_entry->package     = $pkg_url;
+                    $t->response[ $slug ]        = $injected_entry;
+                    set_site_transient( 'update_plugins', $t );
 
-                // Clean up the injected entry regardless of outcome.
-                $t2 = get_site_transient( 'update_plugins' );
-                if ( $t2 && isset( $t2->response[ $slug ] ) ) {
-                    unset( $t2->response[ $slug ] );
-                    set_site_transient( 'update_plugins', $t2 );
+                    $upgrader = new Plugin_Upgrader( $skin );
+                    $result   = $upgrader->upgrade( $slug );
+                    list( $status, $new_version, $error_code, $message ) =
+                        wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+
+                    // Clean up the injected entry regardless of outcome.
+                    $t2 = get_site_transient( 'update_plugins' );
+                    if ( $t2 && isset( $t2->response[ $slug ] ) ) {
+                        unset( $t2->response[ $slug ] );
+                        set_site_transient( 'update_plugins', $t2 );
+                    }
                 }
             } else {
                 // No transient entry, no package URL (premium/licensed plugin).
@@ -285,18 +300,38 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
             // It does NOT change the activation status of the plugin. The plugin remains
             // active or inactive exactly as it was before this call. This is the same
             // method WordPress core uses on its own Updates screen.
-            $upgrader = new Plugin_Upgrader( $skin );
-            $result   = $upgrader->upgrade( $slug );
-            list( $status, $new_version, $error_code, $message ) =
-                wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+            //
+            // Safety: if the package URL requires authentication (e.g. a licensed premium
+            // plugin whose token is stored in the transient from a prior license check),
+            // and WordPress cannot download it, WordPress's own error recovery will call
+            // deactivate_plugins() on the plugin. We verify the URL is reachable first.
+            $safe_to_upgrade = true;
+            if ( $pkg_url ) {
+                $head = wp_remote_head( $pkg_url, [ 'timeout' => 10, 'redirection' => 5 ] );
+                if ( is_wp_error( $head ) || wp_remote_retrieve_response_code( $head ) >= 400 ) {
+                    $safe_to_upgrade = false;
+                    $error_code      = 'no_package';
+                    $message         = wpmm_explain_error( $error_code )['detail']
+                        . ' (Package URL returned HTTP '
+                        . ( is_wp_error( $head ) ? 'error' : wp_remote_retrieve_response_code( $head ) )
+                        . ' — update aborted to prevent plugin deactivation.)';
+                }
+            }
 
-            if ( $status === 'success' ) {
-                // Surgically remove this item from the transient so the next
-                // plugin in the batch still finds its own entry intact.
-                $t = get_site_transient( 'update_plugins' );
-                if ( $t && isset( $t->response[ $slug ] ) ) {
-                    unset( $t->response[ $slug ] );
-                    set_site_transient( 'update_plugins', $t );
+            if ( $safe_to_upgrade ) {
+                $upgrader = new Plugin_Upgrader( $skin );
+                $result   = $upgrader->upgrade( $slug );
+                list( $status, $new_version, $error_code, $message ) =
+                    wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version );
+
+                if ( $status === 'success' ) {
+                    // Surgically remove this item from the transient so the next
+                    // plugin in the batch still finds its own entry intact.
+                    $t = get_site_transient( 'update_plugins' );
+                    if ( $t && isset( $t->response[ $slug ] ) ) {
+                        unset( $t->response[ $slug ] );
+                        set_site_transient( 'update_plugins', $t );
+                    }
                 }
             }
         }

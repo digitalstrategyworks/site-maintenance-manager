@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        1.9.5
+Stable tag:        1.9.6
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,20 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 1.9.6 =
+* Critical fix: Premium plugins (Gravity Forms, ACF, Divi, Sucuri, etc.)
+  were being deactivated after a failed update attempt. Root cause: when
+  WordPress's Plugin_Upgrader fails to download a package (e.g. because
+  a licensed plugin's package URL requires authentication that is not
+  available in the AJAX context), WordPress core calls deactivate_plugins()
+  as part of its own error recovery / rollback. Greenskeeper was triggering
+  this by attempting the upgrade before verifying the package was accessible.
+  Fix: a wp_remote_head() check is now performed against the package URL
+  before any upgrade is attempted. If the URL returns HTTP 4xx or 5xx,
+  the update is aborted with a clear error message and the plugin is left
+  untouched. This applies to both the transient-injection path and the
+  normal upgrade path.
 
 = 1.9.5 =
 * Feature: Sent Email History now updates instantly via AJAX after a
