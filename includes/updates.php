@@ -58,6 +58,31 @@ function wpmm_get_available_updates( $site_id = 0 ) {
     $update_plugins = get_site_transient( 'update_plugins' );
     $all_plugins    = get_plugins();
     if ( ! empty( $update_plugins->response ) ) {
+
+        // Collect all plugin files that have an empty package URL so we can
+        // attempt a single fresh wp_update_plugins() call to populate them,
+        // rather than marking them all as requires_manual immediately.
+        // Some vendors (AIOSEO Pro, WPForms Pro) legitimately have an empty
+        // URL in a cached transient but provide one after a fresh check.
+        // Others (Gravity Forms add-ons) remain empty even after a refresh
+        // because they require a browser-based license validation step.
+        $empty_pkg_slugs = [];
+        foreach ( $update_plugins->response as $plugin_file => $plugin_data ) {
+            $pkg = isset( $plugin_data->package ) ? $plugin_data->package : '';
+            if ( $pkg === '' ) {
+                $empty_pkg_slugs[] = $plugin_file;
+            }
+        }
+
+        // If any plugins have empty URLs, do one fresh check now so we can
+        // distinguish "genuinely no URL" from "URL not cached yet".
+        if ( ! empty( $empty_pkg_slugs ) ) {
+            require_once ABSPATH . 'wp-admin/includes/update.php';
+            delete_site_transient( 'update_plugins' );
+            wp_update_plugins();
+            $update_plugins = get_site_transient( 'update_plugins' );
+        }
+
         foreach ( $update_plugins->response as $plugin_file => $plugin_data ) {
             if ( strpos( $plugin_file, 'greenskeeper' ) !== false ) {
                 continue;
@@ -68,18 +93,20 @@ function wpmm_get_available_updates( $site_id = 0 ) {
             }
             $pkg = isset( $plugin_data->package ) ? $plugin_data->package : '';
 
+            // requires_manual is only true if the URL is STILL empty after a
+            // fresh update check. This correctly identifies plugins like Gravity
+            // Forms add-ons that withhold the URL pending browser license
+            // validation, while allowing AIOSEO Pro and similar to proceed
+            // normally through the upgrader with their freshly populated URL.
+            $requires_manual = ( $pkg === '' && in_array( $plugin_file, $empty_pkg_slugs, true ) );
+
             $result['plugins'][] = [
-                'name'        => isset( $all_plugins[ $plugin_file ]['Name'] )    ? $all_plugins[ $plugin_file ]['Name']    : $plugin_file,
-                'slug'        => $plugin_file,
-                'old_version' => isset( $all_plugins[ $plugin_file ]['Version'] ) ? $all_plugins[ $plugin_file ]['Version'] : '',
-                'new_version' => isset( $plugin_data->new_version )               ? $plugin_data->new_version               : '',
-                // package URL stored so the upgrader can use it directly if the
-                // transient has been cleared by the time the update AJAX call fires.
-                'package'     => $pkg,
-                // Flag plugins whose vendor withholds the package URL until a
-                // browser-based license check passes (e.g. Gravity Forms add-ons).
-                // These cannot be updated via AJAX and need manual intervention.
-                'requires_manual' => ( $pkg === '' ),
+                'name'            => isset( $all_plugins[ $plugin_file ]['Name'] )    ? $all_plugins[ $plugin_file ]['Name']    : $plugin_file,
+                'slug'            => $plugin_file,
+                'old_version'     => isset( $all_plugins[ $plugin_file ]['Version'] ) ? $all_plugins[ $plugin_file ]['Version'] : '',
+                'new_version'     => isset( $plugin_data->new_version )               ? $plugin_data->new_version               : '',
+                'package'         => $pkg,
+                'requires_manual' => $requires_manual,
             ];
         }
     }

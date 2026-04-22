@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.0.2
+Stable tag:        2.0.3
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,18 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.3 =
+* Fix: AIOSEO Pro was incorrectly flagged as "Manual update required"
+  in v2.0.1. The requires_manual flag was being set at scan time based
+  on the package URL being empty in the cached transient — but AIOSEO
+  Pro and similar plugins legitimately have an empty URL in a stale
+  cache and only provide one after a fresh wp_update_plugins() check.
+  The scan now performs a single fresh check when any empty package
+  URLs are detected, then sets requires_manual only for plugins that
+  are still empty after the refresh. Gravity Forms add-ons correctly
+  remain flagged as manual; AIOSEO Pro correctly proceeds through the
+  normal upgrade path.
 
 = 2.0.2 =
 * Fix: Divi and other premium themes now update correctly. The theme
