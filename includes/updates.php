@@ -497,16 +497,40 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
         ]
     );
 
-    // Persist the session ID and current blog ID so that the Email Reports page
-    // can retrieve the correct log entries even after a page navigation.
-    // On Multisite, admin-ajax.php runs on the main blog by default, so we
-    // store the blog_id alongside the session_id and switch_to_blog() when
-    // fetching entries in wpmm_ajax_send_email().
+    // Persist the session ID into the pending sessions list so the Email
+    // Reports page can include ALL unsent sessions in a single report —
+    // even when plugins and themes were updated in separate sessions.
+    //
+    // wpmm_pending_sessions stores an array of sessions run since the last
+    // email was sent. Each entry has: session_id, blog_id, updated_at.
+    // wpmm_last_session is kept in sync for backward compatibility.
     if ( $session_id ) {
+        $pending   = get_option( 'wpmm_pending_sessions', [] );
+        $blog_id   = get_current_blog_id();
+        $timestamp = current_time( 'mysql' );
+
+        // Add this session if it's not already in the list.
+        $already = false;
+        foreach ( $pending as $p ) {
+            if ( isset( $p['session_id'] ) && $p['session_id'] === $session_id ) {
+                $already = true;
+                break;
+            }
+        }
+        if ( ! $already ) {
+            $pending[] = [
+                'session_id' => $session_id,
+                'blog_id'    => $blog_id,
+                'updated_at' => $timestamp,
+            ];
+            update_option( 'wpmm_pending_sessions', $pending, false );
+        }
+
+        // Keep wpmm_last_session in sync for backward compatibility.
         update_option( 'wpmm_last_session', [
             'session_id' => $session_id,
-            'blog_id'    => get_current_blog_id(),
-            'updated_at' => current_time( 'mysql' ),
+            'blog_id'    => $blog_id,
+            'updated_at' => $timestamp,
         ], false );
     }
 

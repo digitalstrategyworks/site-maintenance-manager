@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.0.3
+Stable tag:        2.0.4
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,20 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.4 =
+* Feature: Email reports now accumulate ALL unsent update sessions.
+  Previously, running plugins in one session and themes in another
+  meant the email only covered the most recent session. A new
+  wpmm_pending_sessions option tracks every session run since the
+  last email was sent. When you click Send Report Email, all pending
+  sessions are merged chronologically into a single report. The
+  pending sessions list is cleared after a successful send, ready
+  for the next maintenance cycle.
+* UI: The Email Reports page now shows how many unsent sessions are
+  pending and the time range they cover. When multiple sessions are
+  pending, a green confirmation note reads "All N sessions will be
+  combined into one email".
 
 = 2.0.3 =
 * Fix: AIOSEO Pro was incorrectly flagged as "Manual update required"

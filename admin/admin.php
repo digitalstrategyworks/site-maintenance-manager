@@ -1552,7 +1552,8 @@ function wpmm_render_email() {
                     <p><strong>Email Template</strong></p>
                     <div class="wpmm-email-meta">
                         <?php
-                        $ls = get_option( 'wpmm_last_session', [] );
+                        $ls      = get_option( 'wpmm_last_session', [] );
+                        $pending = get_option( 'wpmm_pending_sessions', [] );
                         $perf_admin = wpmm_get_default_admin();
                         if ( $perf_admin ) {
                             $first_name = get_user_meta( $perf_admin->ID, 'first_name', true );
@@ -1564,10 +1565,30 @@ function wpmm_render_email() {
                         }
                         ?>
                         <span><strong>From:</strong> <?php echo esc_html( $from_label ); ?></span>
-                        <?php if ( ! empty( $ls['session_id'] ) ) : ?>
+                        <?php if ( ! empty( $pending ) ) :
+                            $count    = count( $pending );
+                            $earliest = isset( $pending[0]['updated_at'] ) ? $pending[0]['updated_at'] : '';
+                            $last_p   = end( $pending );
+                            $latest   = isset( $last_p['updated_at'] ) ? $last_p['updated_at'] : '';
+                        ?>
+                            <span><strong>Content:</strong>
+                                <?php echo esc_html( $count ); ?> unsent update session<?php echo $count > 1 ? 's' : ''; ?>
+                                <?php if ( $count > 1 && $earliest && $latest ) : ?>
+                                    &mdash; <?php echo esc_html( date_i18n( 'M j g:i A', strtotime( $earliest ) ) ); ?>
+                                    to <?php echo esc_html( date_i18n( 'M j g:i A', strtotime( $latest ) ) ); ?>
+                                <?php elseif ( $earliest ) : ?>
+                                    &mdash; <?php echo esc_html( date_i18n( 'F j, Y \\a\\t g:i A', strtotime( $earliest ) ) ); ?>
+                                <?php endif; ?>
+                            </span>
+                            <?php if ( $count > 1 ) : ?>
+                            <span style="color:var(--wpmm-green);font-size:12px;">
+                                &#10003; All <?php echo esc_html( $count ); ?> sessions will be combined into one email
+                            </span>
+                            <?php endif; ?>
+                        <?php elseif ( ! empty( $ls['session_id'] ) ) : ?>
                             <span><strong>Content:</strong>
                                 Updates from session on
-                                <?php echo esc_html( date_i18n( 'F j, Y 	 g:i A', strtotime( $ls['updated_at'] ) ) ); ?>
+                                <?php echo esc_html( date_i18n( 'F j, Y \\a\\t g:i A', strtotime( $ls['updated_at'] ) ) ); ?>
                             </span>
                         <?php else : ?>
                             <span><strong>Content:</strong> Most recent 100 log entries (no session found)</span>

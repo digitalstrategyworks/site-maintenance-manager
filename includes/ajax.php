@@ -65,20 +65,16 @@ function wpmm_ajax_send_email() {
     $subject  = sanitize_text_field( wp_unslash( $_POST['subject']  ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
     $admin_id = absint( $_POST['admin_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
-    // Session resolution strategy (in priority order):
-    // 1. session_id explicitly posted (same-page flow from Updates page).
-    // 2. wpmm_last_session option (cross-page flow: updates → Email Reports).
-    // 3. Empty string → fall back to the 100 most recent log entries.
+    // ── Session resolution strategy ──────────────────────────────────────────
+    // Priority order:
+    // 1. session_id explicitly posted (same-page flow from Updates page) →
+    //    use that single session only.
+    // 2. wpmm_pending_sessions option (cross-page flow) → fetch ALL unsent
+    //    sessions so plugins updated in one session and themes in another
+    //    both appear in the same email report.
+    // 3. wpmm_last_session fallback for backward compatibility.
+    // 4. Empty → fall back to the 100 most recent log entries.
     $posted_session = sanitize_text_field( wp_unslash( $_POST['session_id'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified above.
-    $last           = get_option( 'wpmm_last_session', [] );
-
-    $session_id = $posted_session;
-    $blog_id    = get_current_blog_id();
-
-    if ( ! $session_id && ! empty( $last['session_id'] ) ) {
-        $session_id = $last['session_id'];
-        $blog_id    = isset( $last['blog_id'] ) ? (int) $last['blog_id'] : get_current_blog_id();
-    }
 
     if ( ! is_email( $to ) ) {
         wp_send_json_error( 'Invalid email address.' );
@@ -86,30 +82,89 @@ function wpmm_ajax_send_email() {
 
     global $wpdb;
 
-    // On Multisite, switch to the blog where the updates were actually run
-    // so we read from the correct per-site table (e.g. wp_2_wpmm_update_log).
-    $switched = false;
-    if ( is_multisite() && $blog_id && $blog_id !== get_current_blog_id() ) {
-        switch_to_blog( $blog_id );
-        $switched = true;
-    }
+    if ( $posted_session ) {
+        // Explicit single-session send (from the Updates page send button).
+        $last    = get_option( 'wpmm_last_session', [] );
+        $blog_id = isset( $last['blog_id'] ) ? (int) $last['blog_id'] : get_current_blog_id();
 
-    if ( $session_id ) {
-        $log_entries = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-            "SELECT * FROM {$wpdb->prefix}wpmm_update_log WHERE session_id = %s ORDER BY updated_at ASC",
-            $session_id
-        ) );
-    } else {
-        // No session at all — use the most recent 100 entries.
+        $switched = false;
+        if ( is_multisite() && $blog_id && $blog_id !== get_current_blog_id() ) {
+            switch_to_blog( $blog_id );
+            $switched = true;
+        }
+
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         $log_entries = $wpdb->get_results( $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}wpmm_update_log ORDER BY updated_at DESC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-            100
+            'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' WHERE session_id = %s ORDER BY updated_at ASC',
+            $posted_session
         ) );
-    }
 
-    if ( $switched ) {
-        restore_current_blog();
+        if ( $switched ) { restore_current_blog(); }
+
+    } else {
+        // Cross-page flow — fetch ALL pending (unsent) sessions.
+        $pending = get_option( 'wpmm_pending_sessions', [] );
+
+        if ( ! empty( $pending ) ) {
+            // Collect entries from every pending session, grouped by blog.
+            $log_entries = [];
+            $seen_blogs  = [];
+
+            foreach ( $pending as $p ) {
+                $sid     = isset( $p['session_id'] ) ? $p['session_id'] : '';
+                $blog_id = isset( $p['blog_id'] )    ? (int) $p['blog_id'] : get_current_blog_id();
+                if ( ! $sid ) { continue; }
+
+                $switched = false;
+                if ( is_multisite() && $blog_id && $blog_id !== get_current_blog_id() ) {
+                    switch_to_blog( $blog_id );
+                    $switched = true;
+                }
+
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                $rows = $wpdb->get_results( $wpdb->prepare(
+                    'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' WHERE session_id = %s ORDER BY updated_at ASC',
+                    $sid
+                ) );
+
+                if ( $switched ) { restore_current_blog(); }
+
+                $log_entries = array_merge( $log_entries, $rows ?: [] );
+            }
+
+            // Sort merged entries chronologically.
+            usort( $log_entries, function( $a, $b ) {
+                return strcmp( $a->updated_at, $b->updated_at );
+            } );
+
+        } else {
+            // No pending sessions — try wpmm_last_session for backward compat.
+            $last    = get_option( 'wpmm_last_session', [] );
+            $blog_id = isset( $last['blog_id'] ) ? (int) $last['blog_id'] : get_current_blog_id();
+
+            $switched = false;
+            if ( is_multisite() && $blog_id && $blog_id !== get_current_blog_id() ) {
+                switch_to_blog( $blog_id );
+                $switched = true;
+            }
+
+            if ( ! empty( $last['session_id'] ) ) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                $log_entries = $wpdb->get_results( $wpdb->prepare(
+                    'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' WHERE session_id = %s ORDER BY updated_at ASC',
+                    $last['session_id']
+                ) );
+            } else {
+                // No session at all — use most recent 100 entries.
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                $log_entries = $wpdb->get_results( $wpdb->prepare(
+                    'SELECT * FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) . ' ORDER BY updated_at DESC LIMIT %d', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                    100
+                ) );
+            }
+
+            if ( $switched ) { restore_current_blog(); }
+        }
     }
 
     // Update note and manual updates added on the Email Reports page.
@@ -178,6 +233,12 @@ function wpmm_ajax_send_email() {
     }
 
     if ( $result['success'] ) {
+        // Clear the pending sessions list now that the email has been sent.
+        // This ensures the next batch of updates starts a fresh accumulation.
+        if ( ! $posted_session ) {
+            delete_option( 'wpmm_pending_sessions' );
+        }
+
         // Return enough data for the JS to prepend a new row to the history
         // table immediately without a page reload.
         wp_send_json_success( [
