@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      6.9
 Requires PHP:      8.0
-Stable tag:        2.0.1
+Stable tag:        2.0.2
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -618,6 +618,16 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.0.2 =
+* Fix: Divi and other premium themes now update correctly. The theme
+  upgrade path now has full parity with the plugin upgrade path: a
+  package URL freshness check with wp_update_themes() refresh when
+  the URL is stale, skin error inspection on null results (correctly
+  reporting copy failures vs generic errors), and an automatic retry
+  with a fresh signed URL when the initial attempt silently fails.
+  Also adds wp_clean_themes_cache() and opcache_reset() before reading
+  the updated version number after a successful theme upgrade.
 
 = 2.0.1 =
 * Fix: Jetpack and other plugins that fail with a filesystem "Could not

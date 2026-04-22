@@ -367,6 +367,31 @@ function wpmm_do_update( $type, $slug, $package = '' ) {
             $pkg_url = $package;
         }
 
+        // ── Package URL freshness strategy (same as plugin path) ─────────────
+        // Premium theme vendors (Divi, Avada, etc.) generate signed, time-limited
+        // package URLs. If the URL has expired since the scan ran, the download
+        // silently fails and Theme_Upgrader returns null. Force a fresh check.
+        if ( $pkg_url ) {
+            $head        = wp_remote_head( $pkg_url, [ 'timeout' => 8, 'redirection' => 5 ] );
+            $head_status = is_wp_error( $head ) ? 0 : wp_remote_retrieve_response_code( $head );
+
+            if ( $head_status === 0 || $head_status >= 400 ) {
+                require_once ABSPATH . 'wp-admin/includes/update.php';
+                delete_site_transient( 'update_themes' );
+                wp_update_themes();
+
+                $update_themes       = get_site_transient( 'update_themes' );
+                $transient_has_entry = ! empty( $update_themes->response[ $slug ] );
+
+                if ( $transient_has_entry && ! empty( $update_themes->response[ $slug ]['package'] ) ) {
+                    $pkg_url = $update_themes->response[ $slug ]['package'];
+                } else {
+                    $pkg_url = '';
+                }
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         if ( ! $transient_has_entry ) {
             $theme_now = wp_get_theme( $slug );
             $ver_now   = $theme_now->get( 'Version' );
@@ -563,11 +588,23 @@ function wpmm_interpret_plugin_result( $result, $skin, $slug, $old_version, $ret
 /**
  * Shared result interpreter for Theme_Upgrader.
  * Returns [ $status, $new_version, $error_code, $message ].
+ *
+ * Mirrors wpmm_interpret_plugin_result: checks skin errors first on a null
+ * result, then retries once with a fresh signed URL before giving up.
+ * This handles Divi, Avada, and other premium themes whose update servers
+ * issue time-limited signed URLs that may expire between scan and upgrade.
  */
-function wpmm_interpret_theme_result( $result, $skin, $slug, $old_version ) {
+function wpmm_interpret_theme_result( $result, $skin, $slug, $old_version, $retry = true, $retried = false ) {
     if ( $result === true ) {
-        $theme = wp_get_theme( $slug );
-        return [ 'success', $theme->get( 'Version' ), '', '' ];
+        if ( function_exists( 'opcache_reset' ) ) {
+            opcache_reset();
+        }
+        wp_clean_themes_cache( true );
+        clearstatcache( true );
+        $theme   = wp_get_theme( $slug );
+        $ver_new = $theme->get( 'Version' );
+        $msg     = $retried ? 'Updated successfully (required a fresh package URL — retry succeeded).' : '';
+        return [ 'success', $ver_new, '', $msg ];
     }
 
     if ( is_null( $result ) ) {
@@ -576,6 +613,36 @@ function wpmm_interpret_theme_result( $result, $skin, $slug, $old_version ) {
         if ( version_compare( $ver_now, $old_version, '>' ) ) {
             return [ 'success', $ver_now, '', 'Updated successfully (confirmed via version comparison).' ];
         }
+
+        // Check whether the skin recorded a specific filesystem error.
+        $skin_errors = $skin->get_errors()->get_error_messages();
+        if ( ! empty( $skin_errors ) ) {
+            $skin_msg = implode( ' ', $skin_errors );
+            if ( stripos( $skin_msg, 'could not copy' ) !== false
+                || stripos( $skin_msg, 'copy failed' ) !== false
+                || stripos( $skin_msg, 'mkdir' ) !== false ) {
+                $explain = wpmm_explain_error( 'copy_failed' );
+                return [ 'failed', '', 'copy_failed',
+                    $explain['detail'] . ' WordPress reported: ' . $skin_msg ];
+            }
+            return [ 'failed', '', 'update_failed', $skin_msg ];
+        }
+
+        // No skin error — try a fresh signed URL and retry once.
+        if ( $retry ) {
+            require_once ABSPATH . 'wp-admin/includes/update.php';
+            delete_site_transient( 'update_themes' );
+            wp_update_themes();
+
+            $update_themes = get_site_transient( 'update_themes' );
+            if ( ! empty( $update_themes->response[ $slug ]['package'] ) ) {
+                $skin2     = new WP_Ajax_Upgrader_Skin();
+                $upgrader2 = new Theme_Upgrader( $skin2 );
+                $result2   = $upgrader2->upgrade( $slug );
+                return wpmm_interpret_theme_result( $result2, $skin2, $slug, $old_version, false, true );
+            }
+        }
+
         $code = 'wpmm_version_unchanged';
         return [ 'failed', '', $code, wpmm_explain_error( $code )['detail'] ];
     }
