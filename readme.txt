@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.5
+Stable tag:        2.3.6
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -774,6 +774,14 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3.6 =
+* Fix: Retry success banner not updating when a previously failed
+  update returned "already succeeded" on retry. The progress bar
+  was not being shown during the retry pass, which prevented the
+  sequential runner's done callback from completing correctly.
+  Progress bar now shows during retry with "Retrying N updates..."
+  label. Added guard to prevent retry running with empty items list.
 
 = 2.3.5 =
 * Fix: Retry success banner not updating after a failed update was

@@ -567,11 +567,19 @@ jQuery(function ($) {
             $('#wpmm-global-partial, #wpmm-global-allfailed').prop('hidden', true);
 
             var itemsToRetry = failedItems.slice();
+            if (!itemsToRetry.length) { return; }
+
             // Reset per-pass counters for the retry run.
-            // batchSuccessCount keeps its value — we need the cumulative total.
-            // Only batchFailCount and failedItems reset so the retry starts clean.
             failedItems    = [];
             batchFailCount = 0;
+
+            // Show progress bar for the retry pass.
+            $('#wpmm-progress-fill').css('width', '0%');
+            $('#wpmm-progress-label').text(
+                'Retrying ' + itemsToRetry.length + ' update' +
+                (itemsToRetry.length !== 1 ? 's' : '') + '…'
+            );
+            $('#wpmm-global-progress').prop('hidden', false);
 
             runUpdatesSequential(
                 itemsToRetry.map(function (f) {
