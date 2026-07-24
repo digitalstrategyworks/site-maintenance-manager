@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.7
+Stable tag:        2.3.6
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -774,20 +774,6 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
-
-= 2.3.7 =
-* Fix: Subsequent plugin updates failing after one failure. The
-  already_succeeded check was firing for ALL update attempts including
-  retries, causing cascading false positives. The check now only runs
-  on initial batch updates, never on explicit retries.
-* Fix: Retry button showing "already succeeded" instead of running the
-  update. Added is_retry flag passed from JS to AJAX handler. When
-  is_retry=1 the already_succeeded guard is bypassed entirely and the
-  update runs unconditionally.
-* Fix: Amber "already succeeded" notices and Retry buttons persisting
-  after all updates complete successfully. Notices are now cleared and
-  Retry buttons disabled when the green success banner appears, on both
-  the initial pass and after a successful retry pass.
 
 = 2.3.6 =
 * Fix: Retry success banner not updating when a previously failed

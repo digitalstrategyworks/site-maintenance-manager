@@ -523,6 +523,17 @@ jQuery(function ($) {
 
                 if (batchFailCount === 0) {
                     // ── State A: All succeeded ──────────────────────────────
+                    // Clear any per-item amber notices and disable Retry buttons.
+                    $('.wpmm-item-status').each(function () {
+                        if ($(this).find('.dashicons-info').length) {
+                            $(this).html('');
+                        }
+                    });
+                    $('.wpmm-update-one-btn').each(function () {
+                        if ($(this).text().trim() === 'Retry') {
+                            $(this).prop('disabled', true).css('opacity', '0.3');
+                        }
+                    });
                     $('#wpmm-success-msg').text(
                         'All ' + batchSuccessCount + ' of ' + totalItems +
                         ' update' + (totalItems !== 1 ? 's' : '') + ' completed successfully!'
@@ -595,6 +606,22 @@ jQuery(function ($) {
 
                         if (batchFailCount === 0) {
                             // All items across all passes succeeded.
+                            // Clear all per-item amber notices and Retry buttons
+                            // so nothing suggests retrying when everything is done.
+                            $('.wpmm-item-status').each(function () {
+                                var $s = $(this);
+                                // Remove amber already-succeeded notices.
+                                if ($s.find('.dashicons-info').length) {
+                                    $s.html('');
+                                }
+                            });
+                            // Hide any remaining Retry buttons.
+                            $('.wpmm-update-one-btn').each(function () {
+                                if ($(this).text().trim() === 'Retry') {
+                                    $(this).prop('disabled', true).css('opacity', '0.3');
+                                }
+                            });
+
                             $('#wpmm-success-msg').text(
                                 'All ' + batchSuccessCount + ' of ' + totalItems +
                                 ' update' + (totalItems !== 1 ? 's' : '') +
@@ -602,7 +629,7 @@ jQuery(function ($) {
                             );
                             $('#wpmm-global-success').prop('hidden', false);
 
-                            // Fire batch_complete notification now that everything succeeded.
+                            // Fire batch_complete notification.
                             $.post(wpmm.ajax_url, {
                                 action:     'wpmm_batch_complete',
                                 nonce:      wpmm.nonce,
@@ -612,7 +639,6 @@ jQuery(function ($) {
                             });
 
                         } else if (batchSuccessCount === 0) {
-                            // Everything still failing.
                             $('#wpmm-allfailed-msg').text(
                                 'All ' + batchFailCount + ' update' +
                                 (batchFailCount !== 1 ? 's' : '') +
@@ -621,7 +647,6 @@ jQuery(function ($) {
                             $('#wpmm-global-allfailed').prop('hidden', false);
 
                         } else {
-                            // Still a mix after retry.
                             $('#wpmm-partial-msg').html(
                                 '<strong>' + batchSuccessCount + ' of ' + totalItems +
                                 ' updates completed.</strong> ' + batchFailCount + ' update' +
@@ -630,7 +655,8 @@ jQuery(function ($) {
                             $('#wpmm-global-partial').prop('hidden', false);
                         }
                     }, 600);
-                }
+                },
+                true // isRetry — bypasses already_succeeded check on server
             );
         });
 
@@ -663,7 +689,7 @@ jQuery(function ($) {
     // done() called when all items are finished.
     // A short delay between items prevents rapid-fire requests from being
     // throttled or timed out by shared hosting environments.
-    function runUpdatesSequential(items, index, onProgress, done) {
+    function runUpdatesSequential(items, index, onProgress, done, isRetry) {
         if (index >= items.length) { done(); return; }
         var item = items[index];
         var $li  = $('.wpmm-item[data-type="' + item.type + '"]').filter(function () {
@@ -673,13 +699,13 @@ jQuery(function ($) {
         runSingleUpdate(item.type, item.slug, item.pkg, $li, $btn, function (itemName, success, resultData) {
             if (onProgress) { onProgress(itemName, success, resultData); }
             setTimeout(function () {
-                runUpdatesSequential(items, index + 1, onProgress, done);
+                runUpdatesSequential(items, index + 1, onProgress, done, isRetry);
             }, 800);
-        });
+        }, isRetry || false);
     }
 
     // ── Core AJAX update call ──────────────────────────────────────────────
-    function runSingleUpdate(type, slug, pkg, $li, $btn, callback) {
+    function runSingleUpdate(type, slug, pkg, $li, $btn, callback, isRetry) {
         var $status = $li.find('.wpmm-item-status');
         $btn.prop('disabled', true).html(
             '<span class="dashicons dashicons-update wpmm-spin"></span> Updating&hellip;'
@@ -689,7 +715,7 @@ jQuery(function ($) {
         $.ajax({
             url:     wpmm.ajax_url,
             method:  'POST',
-            timeout: 120000,   // 120s — plugin updates on slow hosts can take a while
+            timeout: 120000,
             data: {
                 action:     'wpmm_run_update',
                 nonce:      wpmm.nonce,
@@ -697,7 +723,8 @@ jQuery(function ($) {
                 item_slug:  slug,
                 session_id: sessionId,
                 package:    pkg,
-                site_id:    $('#wpmm-scope-site-id').val() || 0
+                site_id:    $('#wpmm-scope-site-id').val() || 0,
+                is_retry:   isRetry ? 1 : 0
             },
             success: function (res) {
                 $btn.prop('disabled', false);

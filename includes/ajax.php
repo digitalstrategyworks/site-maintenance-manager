@@ -153,12 +153,14 @@ function wpmm_ajax_run_update() {
     }
 
     $GLOBALS['wpmm_session_id'] = $session_id;
+    $is_retry = ! empty( $_POST['is_retry'] ) && (int) $_POST['is_retry'] === 1; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
     // ── Already succeeded this session? ──────────────────────────────────────
-    // If this item already has a success row in the update log for the current
-    // session, warn the admin rather than running a potentially confusing retry.
-    // The JS will show an inline amber notice with a "Retry Anyway" option.
-    if ( $session_id && $slug ) {
+    // Only check on the initial batch run — never on explicit retries.
+    // This prevents the already_succeeded guard from blocking retries and
+    // prevents cascading false positives when one failure causes subsequent
+    // plugins to be flagged as already succeeded.
+    if ( ! $is_retry && $session_id && $slug ) {
         global $wpdb;
         $already_succeeded = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             'SELECT COUNT(*) FROM ' . esc_sql( $wpdb->prefix . 'wpmm_update_log' ) .

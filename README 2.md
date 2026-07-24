@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.3.7  
+**Version:** 2.3.6  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,11 +705,6 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
-### 2.3.7
-- Fix: Subsequent updates failing after one failure — already_succeeded check bypassed on retries
-- Fix: Retry button showing already-succeeded instead of running update — is_retry flag added
-- Fix: Amber notices and Retry buttons persisting after all updates succeed
-
 ### 2.3.6
 - Fix: Retry banner not updating when already_succeeded returned — progress bar now shown during retry pass
 
@@ -1033,11 +1028,6 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
-
-### 2.3.7
-- Fix: Subsequent updates failing after one failure — already_succeeded check bypassed on retries
-- Fix: Retry button showing already-succeeded instead of running update — is_retry flag added
-- Fix: Amber notices and Retry buttons persisting after all updates succeed
 
 ### 2.3.6
 - Fix: Retry banner not updating when already_succeeded returned — progress bar now shown during retry pass
