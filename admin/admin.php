@@ -202,6 +202,7 @@ function wpmm_enqueue_assets( $hook ) {
         'url_email'   => wpmm_subpage_url( WPMM_SLUG_EMAIL ),
         'url_dash'    => wpmm_subpage_url( WPMM_SLUG_DASHBOARD ),
         'url_settings'   => wpmm_subpage_url( WPMM_SLUG_SETTINGS ),
+        'plugins_url'    => admin_url( 'plugins.php' ),
         // Last persisted session — lets the Email Reports page pre-populate
         // the correct session_id without needing localStorage.
         'last_session_id' => ( function() {
@@ -1114,6 +1115,49 @@ function wpmm_render_updates() {
 
             <!-- site_id passed to AJAX so JS can filter and log correctly -->
             <input type="hidden" id="wpmm-scope-site-id" value="<?php echo absint( $scoped_site_id ); ?>">
+
+            <?php
+            // ── Auto-update warning ───────────────────────────────────────────
+            // Count plugins and themes with auto-updates enabled.
+            $auto_plugins     = (array) get_option( 'auto_update_plugins', [] );
+            $auto_themes      = (array) get_option( 'auto_update_themes',  [] );
+            $auto_plugin_count = count( array_filter( $auto_plugins ) );
+            $auto_theme_count  = count( array_filter( $auto_themes ) );
+            $auto_total        = $auto_plugin_count + $auto_theme_count;
+            if ( $auto_total > 0 ) :
+            ?>
+            <div id="wpmm-auto-update-warning"
+                 style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;
+                        padding:14px 18px;margin-bottom:16px;display:flex;
+                        align-items:flex-start;gap:12px;">
+                <span class="dashicons dashicons-warning"
+                      style="color:#f59e0b;font-size:20px;width:20px;height:20px;
+                             flex-shrink:0;margin-top:1px;"></span>
+                <div style="flex:1;">
+                    <strong style="color:#92400e;display:block;margin-bottom:4px;">
+                        <?php echo absint( $auto_total ); ?> auto-update<?php echo $auto_total !== 1 ? 's' : ''; ?> enabled
+                        (<?php echo absint( $auto_plugin_count ); ?> plugin<?php echo $auto_plugin_count !== 1 ? 's' : ''; ?>
+                        <?php if ( $auto_theme_count ) : ?>
+                            and <?php echo absint( $auto_theme_count ); ?> theme<?php echo $auto_theme_count !== 1 ? 's' : ''; ?>
+                        <?php endif; ?>)
+                    </strong>
+                    <p style="margin:0 0 10px;font-size:13px;color:#78350f;line-height:1.6;">
+                        WordPress will update these automatically in the background,
+                        bypassing Greenskeeper's update log and client reports.
+                        Disable auto-updates to keep full control over when and what gets updated.
+                    </p>
+                    <button type="button"
+                            id="wpmm-disable-auto-updates-btn"
+                            class="wpmm-btn wpmm-btn-secondary"
+                            style="font-size:12px;border-color:#fca5a5;color:#b91c1c;">
+                        <span class="dashicons dashicons-dismiss"
+                              style="font-size:14px;width:14px;height:14px;"></span>
+                        Disable All Auto-Updates
+                    </button>
+                    <span id="wpmm-auto-update-result" style="font-size:12px;margin-left:10px;"></span>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Action toolbar -->
             <div class="wpmm-toolbar">

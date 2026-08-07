@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.8
+Stable tag:        2.4
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -774,6 +774,63 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4 =
+* Feature: Disable All Auto-Updates. Amber warning banner on the
+  Updates page shows how many plugins and themes have auto-updates
+  enabled, with a one-click "Disable All Auto-Updates" button.
+  Confirmation card appears on success with instructions for
+  re-enabling individually and a link to the WordPress Plugins admin.
+  Action logged to the Site Activity Log. Auto-Updates card on the
+  Settings page shows current status and the same disable action.
+* Feature: Automatic 502/503/504 backoff retry. When a plugin update
+  returns a server error, Greenskeeper automatically waits and retries
+  that specific item up to 2 additional times before marking it as
+  failed — 5 seconds on the first retry, 10 seconds on the second.
+  Item row shows "Server busy — retrying in X seconds..." and the
+  progress bar label updates so the admin knows the batch has not
+  frozen.
+* Feature: Known heavy-hitter recovery pause. After updating
+  resource-intensive plugins (AIOSEO, WooCommerce, Elementor, Gravity
+  Forms, Wordfence, Yoast, Jetpack, RankMath, WPML, The Events
+  Calendar, LearnDash, MemberPress), Greenskeeper inserts an 8-second
+  recovery pause before starting the next update, with a progress
+  label indicating the pause. All other updates retain the standard
+  800ms inter-update delay.
+* Fix: 502 error messages now distinguish between server-busy errors
+  and genuine network failures, with specific guidance for each case.
+
+= 2.3.10 =
+* Feature: Automatic 502/503/504 backoff retry. When a plugin update
+  returns a server error, Greenskeeper automatically waits and retries
+  that specific item up to 2 additional times before marking it as
+  failed — 5 seconds on the first retry, 10 seconds on the second.
+  The item row shows "Server busy — retrying in 5 seconds..." and the
+  progress bar label updates so the admin knows the batch hasn't frozen.
+* Feature: Known heavy-hitter pause. After updating resource-intensive
+  plugins (AIOSEO, WooCommerce, Elementor, Gravity Forms, Wordfence,
+  Yoast, Jetpack, RankMath, WPML, The Events Calendar, LearnDash,
+  MemberPress), Greenskeeper inserts an 8-second recovery pause before
+  starting the next update, with a progress label indicating the pause.
+  All other updates retain the standard 800ms inter-update delay.
+* Fix: 502 error messages now distinguish between server-busy errors
+  and genuine network failures, with appropriate guidance for each.
+
+= 2.3.9 =
+* Feature: Disable All Auto-Updates — amber warning banner on the
+  Updates page shows how many plugins and themes have auto-updates
+  enabled, with a "Disable All Auto-Updates" button that disables
+  them in one click. On success shows a green confirmation card with
+  instructions on re-enabling individually and a link to the
+  WordPress Plugins admin. Logged to the Site Activity Log.
+* Feature: Auto-Updates settings card on the Settings page shows
+  current auto-update status (green if all disabled, amber if any
+  enabled), a Disable All button when needed, and persistent
+  instructions for re-enabling via the WordPress Plugins screen.
+* Feature: Per-item Retry button on Updates page now correctly
+  passes is_retry flag through runUpdatesSequential so the
+  already_succeeded server-side guard is bypassed on explicit
+  retries.
 
 = 2.3.8 =
 * Feature: Universal external update detection. Greenskeeper now

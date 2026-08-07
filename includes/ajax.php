@@ -7,9 +7,10 @@ add_action( 'wp_ajax_wpmm_resend_email',     'wpmm_ajax_resend_email' );
 add_action( 'wp_ajax_wpmm_get_updates',      'wpmm_ajax_get_updates' );
 add_action( 'wp_ajax_wpmm_get_email_body',   'wpmm_ajax_get_email_body' );
 add_action( 'wp_ajax_wpmm_batch_complete',   'wpmm_ajax_batch_complete' );
-add_action( 'wp_ajax_wpmm_queue_session',    'wpmm_ajax_queue_session' );
-add_action( 'wp_ajax_wpmm_clear_session',    'wpmm_ajax_clear_session' );
-add_action( 'wp_ajax_wpmm_preview_email',    'wpmm_ajax_preview_email' );
+add_action( 'wp_ajax_wpmm_queue_session',       'wpmm_ajax_queue_session' );
+add_action( 'wp_ajax_wpmm_clear_session',       'wpmm_ajax_clear_session' );
+add_action( 'wp_ajax_wpmm_preview_email',       'wpmm_ajax_preview_email' );
+add_action( 'wp_ajax_wpmm_disable_auto_updates','wpmm_ajax_disable_auto_updates' );
 // wpmm_save_settings is registered in admin/settings.php
 
 // ── Shared capability check ───────────────────────────────────────────────────
@@ -771,6 +772,59 @@ function wpmm_ajax_preview_email() {
     );
 
     wp_send_json_success( [ 'body' => $body ] );
+}
+
+/**
+ * Disable auto-updates for all plugins and themes in one action.
+ * Clears the auto_update_plugins and auto_update_themes options,
+ * logs the action to the Site Activity Log, and returns a summary.
+ */
+function wpmm_ajax_disable_auto_updates() {
+    check_ajax_referer( 'wpmm_nonce', 'nonce' );
+    if ( ! current_user_can( wpmm_required_cap() ) ) {
+        wp_send_json_error( 'Permission denied.' );
+    }
+
+    // ── Count currently enabled auto-updates ─────────────────────────────────
+    $auto_plugins = (array) get_option( 'auto_update_plugins', [] );
+    $auto_themes  = (array) get_option( 'auto_update_themes',  [] );
+    $plugin_count = count( array_filter( $auto_plugins ) );
+    $theme_count  = count( array_filter( $auto_themes ) );
+
+    // ── Disable all ───────────────────────────────────────────────────────────
+    update_option( 'auto_update_plugins', [] );
+    update_option( 'auto_update_themes',  [] );
+
+    // Also disable the site-level auto-update core options if set.
+    update_option( 'auto_update_core_dev',   false );
+    update_option( 'auto_update_core_minor', false );
+    update_option( 'auto_update_core_major', false );
+
+    // ── Log to Site Activity Log ──────────────────────────────────────────────
+    if ( function_exists( 'wpmm_log_activity' ) ) {
+        wpmm_log_activity(
+            'auto_updates_disabled',
+            WPMM_ACTIVITY_SITE,
+            sprintf(
+                'Auto-updates disabled for %d plugin%s and %d theme%s via Greenskeeper.',
+                $plugin_count,
+                $plugin_count !== 1 ? 's' : '',
+                $theme_count,
+                $theme_count !== 1 ? 's' : ''
+            ),
+            [
+                'plugins_disabled' => $plugin_count,
+                'themes_disabled'  => $theme_count,
+            ],
+            get_current_user_id()
+        );
+    }
+
+    wp_send_json_success( [
+        'plugins_disabled' => $plugin_count,
+        'themes_disabled'  => $theme_count,
+        'total'            => $plugin_count + $theme_count,
+    ] );
 }
 
 function wpmm_ajax_queue_session() {

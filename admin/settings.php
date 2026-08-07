@@ -999,6 +999,98 @@ function wpmm_render_settings() {
             </div><!-- #wpmm-smtp-card -->
 
 
+            <!-- ── Auto-Updates ──────────────────────────────────────── -->
+            <div class="wpmm-card" id="wpmm-auto-update-card">
+                <h2 class="wpmm-card-title">
+                    <span class="dashicons dashicons-update-alt"></span> Auto-Updates
+                </h2>
+                <p class="wpmm-card-desc">
+                    WordPress allows individual plugins and themes to auto-update silently
+                    in the background. When auto-updates are enabled, changes bypass
+                    Greenskeeper&rsquo;s update log and client reports — your clients
+                    may receive reports that don&rsquo;t reflect the full picture.
+                    Disabling auto-updates gives you full control over when and what
+                    gets updated.
+                </p>
+
+                <?php
+                $auto_plugins      = (array) get_option( 'auto_update_plugins', [] );
+                $auto_themes       = (array) get_option( 'auto_update_themes',  [] );
+                $auto_plugin_count = count( array_filter( $auto_plugins ) );
+                $auto_theme_count  = count( array_filter( $auto_themes ) );
+                $auto_total        = $auto_plugin_count + $auto_theme_count;
+                ?>
+
+                <!-- Current status -->
+                <div style="background:<?php echo $auto_total > 0 ? '#fffbeb' : '#f0fdf4'; ?>;
+                            border:1px solid <?php echo $auto_total > 0 ? '#fde68a' : '#bbf7d0'; ?>;
+                            border-radius:6px;padding:14px 18px;margin-bottom:16px;
+                            display:flex;align-items:flex-start;gap:12px;"
+                     id="wpmm-auto-update-settings-status">
+                    <span class="dashicons <?php echo $auto_total > 0 ? 'dashicons-warning' : 'dashicons-yes-alt'; ?>"
+                          style="color:<?php echo $auto_total > 0 ? '#f59e0b' : '#16a34a'; ?>;
+                                 font-size:20px;width:20px;height:20px;flex-shrink:0;margin-top:1px;"></span>
+                    <div>
+                        <?php if ( $auto_total > 0 ) : ?>
+                            <strong style="color:#92400e;display:block;margin-bottom:3px;">
+                                <?php echo absint( $auto_total ); ?> auto-update<?php echo $auto_total !== 1 ? 's' : ''; ?> currently enabled
+                            </strong>
+                            <p style="margin:0;font-size:13px;color:#78350f;">
+                                <?php echo absint( $auto_plugin_count ); ?> plugin<?php echo $auto_plugin_count !== 1 ? 's' : ''; ?>
+                                <?php if ( $auto_theme_count ) : ?>
+                                    and <?php echo absint( $auto_theme_count ); ?> theme<?php echo $auto_theme_count !== 1 ? 's' : ''; ?>
+                                <?php endif; ?>
+                                will update automatically in the background.
+                            </p>
+                        <?php else : ?>
+                            <strong style="color:#166534;display:block;margin-bottom:3px;">
+                                All auto-updates are disabled
+                            </strong>
+                            <p style="margin:0;font-size:13px;color:#166534;">
+                                Greenskeeper has full control over updates on this site.
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if ( $auto_total > 0 ) : ?>
+                <!-- Disable button -->
+                <div style="margin-bottom:16px;">
+                    <button type="button"
+                            id="wpmm-disable-auto-updates-settings-btn"
+                            class="wpmm-btn wpmm-btn-secondary"
+                            style="border-color:#fca5a5;color:#b91c1c;">
+                        <span class="dashicons dashicons-dismiss"
+                              style="font-size:14px;width:14px;height:14px;"></span>
+                        Disable All Auto-Updates
+                    </button>
+                    <span id="wpmm-auto-update-settings-result"
+                          style="font-size:12px;margin-left:10px;"></span>
+                </div>
+                <?php endif; ?>
+
+                <!-- Re-enable instructions -->
+                <div style="background:#f8fafc;border:1px solid var(--wpmm-border);
+                            border-radius:6px;padding:14px 18px;">
+                    <strong style="font-size:13px;color:var(--wpmm-text);display:block;margin-bottom:6px;">
+                        How to re-enable auto-updates
+                    </strong>
+                    <p style="margin:0 0 8px;font-size:13px;color:var(--wpmm-text-light);line-height:1.6;">
+                        Auto-updates are managed per-plugin in the WordPress Plugins screen.
+                        To re-enable auto-updates for a specific plugin, visit the Plugins
+                        admin, find the plugin, and click &ldquo;Enable auto-updates&rdquo;
+                        in the Auto-updates column.
+                    </p>
+                    <a href="<?php echo esc_url( admin_url( 'plugins.php' ) ); ?>"
+                       class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm"
+                       style="font-size:12px;">
+                        <span class="dashicons dashicons-admin-plugins"
+                              style="font-size:13px;width:13px;height:13px;"></span>
+                        Go to Plugins Admin &rarr;
+                    </a>
+                </div>
+            </div><!-- #wpmm-auto-update-card -->
+
             <!-- ── Spam Filter & Comments ──────────────────────────── -->
             <div class="wpmm-card" id="wpmm-spam-card">
                 <h2 class="wpmm-card-title">

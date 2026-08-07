@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.3.8  
+**Version:** 2.4  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,21 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.4
+- Feature: Disable All Auto-Updates — amber warning, one-click disable, confirmation card, activity log
+- Feature: Automatic 502/503/504 backoff retry with progress feedback
+- Feature: 8-second recovery pause after known heavy-hitter plugins
+- Fix: 502 error messages specific and actionable
+
+### 2.3.10
+- Feature: Automatic 502/503/504 backoff retry — up to 3 attempts with 5s/10s delays
+- Feature: 8-second recovery pause after known heavy-hitter plugins
+- Fix: 502 error messages now specific and actionable
+
+### 2.3.9
+- Feature: Disable All Auto-Updates — amber warning on Updates page, one-click disable, green confirmation, activity log
+- Feature: Auto-Updates settings card with status indicator and re-enable instructions
+
 ### 2.3.8
 - Feature: Universal external update detection via version snapshot comparison
 - Feature: Grouped email section for external updates by product family
@@ -1038,6 +1053,21 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.4
+- Feature: Disable All Auto-Updates — amber warning, one-click disable, confirmation card, activity log
+- Feature: Automatic 502/503/504 backoff retry with progress feedback
+- Feature: 8-second recovery pause after known heavy-hitter plugins
+- Fix: 502 error messages specific and actionable
+
+### 2.3.10
+- Feature: Automatic 502/503/504 backoff retry — up to 3 attempts with 5s/10s delays
+- Feature: 8-second recovery pause after known heavy-hitter plugins
+- Fix: 502 error messages now specific and actionable
+
+### 2.3.9
+- Feature: Disable All Auto-Updates — amber warning on Updates page, one-click disable, green confirmation, activity log
+- Feature: Auto-Updates settings card with status indicator and re-enable instructions
 
 ### 2.3.8
 - Feature: Universal external update detection via version snapshot comparison

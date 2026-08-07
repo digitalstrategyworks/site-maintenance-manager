@@ -689,28 +689,53 @@ jQuery(function ($) {
     // done() called when all items are finished.
     // A short delay between items prevents rapid-fire requests from being
     // throttled or timed out by shared hosting environments.
+    // ── Known resource-heavy plugins — longer pause after these ───────────────
+    var wpmm_heavy_slugs = [
+        'aioseo', 'all-in-one-seo', 'woocommerce', 'elementor',
+        'gravityforms', 'gravity-forms', 'wordfence', 'wordpress-seo',
+        'yoast', 'jetpack', 'rankmath', 'rank-math', 'wpml',
+        'the-events-calendar', 'tribe', 'learndash', 'memberpress'
+    ];
+
+    function wpmm_is_heavy_slug(slug) {
+        var s = (slug || '').toLowerCase();
+        return wpmm_heavy_slugs.some(function (h) { return s.indexOf(h) !== -1; });
+    }
+
     function runUpdatesSequential(items, index, onProgress, done, isRetry) {
         if (index >= items.length) { done(); return; }
-        var item = items[index];
-        var $li  = $('.wpmm-item[data-type="' + item.type + '"]').filter(function () {
+        var item  = items[index];
+        var $li   = $('.wpmm-item[data-type="' + item.type + '"]').filter(function () {
             return $(this).attr('data-slug') === item.slug;
         });
-        var $btn = $li.find('.wpmm-update-one-btn');
+        var $btn  = $li.find('.wpmm-update-one-btn');
         runSingleUpdate(item.type, item.slug, item.pkg, $li, $btn, function (itemName, success, resultData) {
             if (onProgress) { onProgress(itemName, success, resultData); }
+            // Longer pause after known heavy updaters to allow server recovery.
+            var pause = wpmm_is_heavy_slug(item.slug) ? 8000 : 800;
+            if (pause > 800) {
+                $('#wpmm-progress-label').text(
+                    'Pausing ' + (pause / 1000) + 's after ' + itemName + ' for server recovery\u2026'
+                );
+            }
             setTimeout(function () {
                 runUpdatesSequential(items, index + 1, onProgress, done, isRetry);
-            }, 800);
+            }, pause);
         }, isRetry || false);
     }
 
-    // ── Core AJAX update call ──────────────────────────────────────────────
-    function runSingleUpdate(type, slug, pkg, $li, $btn, callback, isRetry) {
+    // ── Core AJAX update call with 502 backoff ─────────────────────────────
+    function runSingleUpdate(type, slug, pkg, $li, $btn, callback, isRetry, attempt) {
+        attempt = attempt || 1;
+        var maxAttempts = 3;
         var $status = $li.find('.wpmm-item-status');
-        $btn.prop('disabled', true).html(
-            '<span class="dashicons dashicons-update wpmm-spin"></span> Updating&hellip;'
-        );
-        $status.html('');
+
+        if (attempt === 1) {
+            $btn.prop('disabled', true).html(
+                '<span class="dashicons dashicons-update wpmm-spin"></span> Updating&hellip;'
+            );
+            $status.html('');
+        }
 
         $.ajax({
             url:     wpmm.ajax_url,
@@ -820,14 +845,50 @@ jQuery(function ($) {
                 callback(itemName, success, res.data || {});
             },
             error: function (xhr, status) {
-                $btn.prop('disabled', false).html('Retry');
-                var msg = status === 'timeout'
-                    ? 'Request timed out. The server may be slow \u2014 click Retry to try again.'
-                    : 'Request failed (HTTP ' + (xhr.status || '?') + '). Please try again.';
+                $btn.prop('disabled', false);
+
+                // ── 502/503/504 — automatic backoff retry ─────────────────────
+                var is502 = xhr.status === 502 || xhr.status === 503 || xhr.status === 504;
+                if (is502 && attempt < maxAttempts) {
+                    var backoff  = attempt === 1 ? 5000 : 10000;
+                    var itemLabel = slug.replace(/\/.*$/, '').replace(/[-_]/g, ' ');
+                    $status.html(
+                        '<span style="color:#f59e0b;font-size:12px;">' +
+                        '&#9201; Server busy &mdash; retrying ' + escHtml(itemLabel) +
+                        ' in ' + (backoff / 1000) + ' seconds&hellip;</span>'
+                    );
+                    $('#wpmm-progress-label').text(
+                        'Server busy \u2014 retrying ' + itemLabel +
+                        ' in ' + (backoff / 1000) + 's\u2026'
+                    );
+                    setTimeout(function () {
+                        $status.html('');
+                        $btn.prop('disabled', true).html(
+                            '<span class="dashicons dashicons-update wpmm-spin"></span> Retrying&hellip;'
+                        );
+                        runSingleUpdate(type, slug, pkg, $li, $btn, callback, isRetry, attempt + 1);
+                    }, backoff);
+                    return;
+                }
+
+                // Genuine failure or max retries exhausted.
+                var msg = is502
+                    ? 'Server returned a ' + xhr.status + ' error after ' + maxAttempts +
+                      ' attempts. The server may be under heavy load \u2014 try retrying manually in a few minutes.'
+                    : ( status === 'timeout'
+                        ? 'Request timed out. The server may be slow \u2014 click Retry to try again.'
+                        : 'Request failed (HTTP ' + ( xhr.status || '?' ) + '). Please try again.' );
+
+                $btn.html('Retry').removeClass('wpmm-btn-success');
                 $status.html(
                     '<span class="wpmm-status-failed">&#10060; ' + escHtml(msg) + '</span>'
                 );
-                callback(slug, false, { slug: slug, name: slug, status: 'failed', old_version: '', new_version: '', error_code: 'http_error', message: msg });
+                callback(slug, false, {
+                    slug: slug, name: slug, status: 'failed',
+                    old_version: '', new_version: '',
+                    error_code: is502 ? 'wpmm_502' : 'http_error',
+                    message: msg
+                });
             }
         });
     }
@@ -2187,6 +2248,86 @@ jQuery(function ($) {
     $(document).on('click', '.wpmm-modal-close, .wpmm-modal-overlay', function () {
         $('#wpmm-modal-presend-footer').addClass('wpmm-hidden');
         $('#wpmm-modal-title').text('Email Preview');
+    });
+
+    // ── Disable all auto-updates ────────────────────────────────────────────
+    // Handles the button on both the Updates page and the Settings page.
+    function wpmm_do_disable_auto_updates($resultSelector, $btnSelector) {
+        var $btn    = $(btnSelector).prop('disabled', true);
+        var $result = $(resultSelector);
+        $btn.html('<span class="dashicons dashicons-update wpmm-spin" style="font-size:14px;width:14px;height:14px;"></span> Disabling&hellip;');
+        $result.html('<span style="color:var(--wpmm-gray);">Working&hellip;</span>');
+
+        $.post(wpmm.ajax_url, {
+            action: 'wpmm_disable_auto_updates',
+            nonce:  wpmm.nonce,
+        }, function (res) {
+            $btn.prop('disabled', false);
+            if (res.success) {
+                var d = res.data;
+                var msg = 'Auto-updates disabled for ' + d.plugins_disabled + ' plugin' +
+                    (d.plugins_disabled !== 1 ? 's' : '');
+                if (d.themes_disabled) {
+                    msg += ' and ' + d.themes_disabled + ' theme' +
+                        (d.themes_disabled !== 1 ? 's' : '');
+                }
+                msg += '.';
+
+                // Update the button area to show success.
+                $result.html('<span style="color:var(--wpmm-green);">&#10003; ' + msg + '</span>');
+
+                // Hide the warning banner on the Updates page.
+                $('#wpmm-auto-update-warning').slideUp(400);
+
+                // Show the post-disable info card.
+                if (!$('#wpmm-auto-update-disabled-card').length) {
+                    var pluginsUrl = wpmm.plugins_url || '';
+                    var card = '<div id="wpmm-auto-update-disabled-card" ' +
+                        'style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;' +
+                        'padding:14px 18px;margin-top:12px;display:flex;align-items:flex-start;gap:12px;">' +
+                        '<span class="dashicons dashicons-yes-alt" ' +
+                        'style="color:#16a34a;font-size:20px;width:20px;height:20px;flex-shrink:0;margin-top:1px;"></span>' +
+                        '<div style="flex:1;">' +
+                        '<strong style="color:#166534;display:block;margin-bottom:4px;">' + msg + '</strong>' +
+                        '<p style="margin:0 0 10px;font-size:13px;color:#166534;line-height:1.6;">' +
+                        'Greenskeeper now has full control over updates on this site. ' +
+                        'To re-enable auto-updates for a specific plugin, visit the ' +
+                        'WordPress Plugins screen and click "Enable auto-updates" in the Auto-updates column.' +
+                        '</p>' +
+                        (pluginsUrl ? '<a href="' + pluginsUrl + '" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" style="font-size:12px;">' +
+                        '<span class="dashicons dashicons-admin-plugins" style="font-size:13px;width:13px;height:13px;"></span> ' +
+                        'Go to Plugins Admin &rarr;</a>' : '') +
+                        '</div></div>';
+                    $btn.closest('.wpmm-card, #wpmm-auto-update-warning').after(card);
+                }
+
+                // On Settings page — update the status block to green.
+                $('#wpmm-auto-update-settings-status').html(
+                    '<span class="dashicons dashicons-yes-alt" style="color:#16a34a;font-size:20px;width:20px;height:20px;flex-shrink:0;margin-top:1px;"></span>' +
+                    '<div><strong style="color:#166534;display:block;margin-bottom:3px;">All auto-updates are disabled</strong>' +
+                    '<p style="margin:0;font-size:13px;color:#166534;">Greenskeeper has full control over updates on this site.</p></div>'
+                ).css({ 'background': '#f0fdf4', 'border-color': '#bbf7d0' });
+                $('#wpmm-disable-auto-updates-settings-btn').closest('div').slideUp(300);
+
+            } else {
+                $result.html('<span style="color:var(--wpmm-red);">Failed to disable auto-updates. Please try again.</span>');
+                $btn.html('<span class="dashicons dashicons-dismiss" style="font-size:14px;width:14px;height:14px;"></span> Disable All Auto-Updates');
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false)
+                .html('<span class="dashicons dashicons-dismiss" style="font-size:14px;width:14px;height:14px;"></span> Disable All Auto-Updates');
+            $result.html('<span style="color:var(--wpmm-red);">Request failed. Please try again.</span>');
+        });
+    }
+
+    // Updates page button.
+    $(document).on('click', '#wpmm-disable-auto-updates-btn', function () {
+        wpmm_do_disable_auto_updates('#wpmm-auto-update-result', '#wpmm-disable-auto-updates-btn');
+    });
+
+    // Settings page button.
+    $(document).on('click', '#wpmm-disable-auto-updates-settings-btn', function () {
+        wpmm_do_disable_auto_updates('#wpmm-auto-update-settings-result', '#wpmm-disable-auto-updates-settings-btn');
     });
 
     // ── Queue session from Update Log ───────────────────────────────────────
