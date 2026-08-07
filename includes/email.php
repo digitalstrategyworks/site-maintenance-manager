@@ -242,40 +242,77 @@ function wpmm_build_email_body( $log_entries, $admin_id = 0, $manual_entries = [
 
     // ── External updates since last report ───────────────────────────────────
     // Updates run outside Greenskeeper (WP Updates screen, Avada dashboard, etc.)
+    // ── Updates outside Greenskeeper — grouped by product family ─────────────
     $external_section = '';
-    if ( function_exists( 'wpmm_get_external_updates_since_last_report' ) ) {
-        $ext_rows = wpmm_get_external_updates_since_last_report();
-        if ( ! empty( $ext_rows ) ) {
-            $ext_html = '';
-            foreach ( $ext_rows as $er ) {
-                $ename   = esc_html( $er->item_name );
-                $enew    = esc_html( $er->new_version );
-                $etype   = esc_html( ucfirst( $er->item_type ) );
-                $ext_html .= "
-                <tr>
-                  <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;'>
-                    &#9989; <strong>{$ename}</strong>
-                    <br><small style='color:#9ca3af;'>{$etype}</small>
-                  </td>
-                  <td style='padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;'>
-                    <span style='color:#16a34a;font-weight:700;'>Updated to {$enew}</span>
-                    <br><small style='color:#9ca3af;'>Updated outside Greenskeeper</small>
-                  </td>
-                </tr>";
+    if ( function_exists( 'wpmm_get_external_updates_grouped' ) ) {
+        // Find the last sent email timestamp to scope the window.
+        global $wpdb;
+        $last_sent = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+            'SELECT sent_at FROM ' . esc_sql( $wpdb->prefix . 'wpmm_email_log' ) .
+            " WHERE status = 'sent' ORDER BY sent_at DESC LIMIT 1"
+        );
+
+        $grouped = wpmm_get_external_updates_grouped( $last_sent ?: '' );
+
+        if ( ! empty( $grouped ) ) {
+            $families_html = '';
+
+            foreach ( $grouped as $family => $rows ) {
+                // Family sub-heading.
+                $family_color = ( $family === 'Other External Updates' ) ? '#6b7280' : '#1e3a5f';
+                $families_html .= "
+        <div style='margin-bottom:20px;'>
+          <h4 style='margin:0 0 8px;font-size:13px;font-weight:700;color:{$family_color};
+                     text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;
+                     padding-bottom:5px;'>" . esc_html( $family ) . "</h4>
+          <table width='100%' cellpadding='0' cellspacing='0'
+                 style='border-collapse:collapse;border:1px solid #e5e7eb;border-radius:4px;overflow:hidden;'>
+            <thead>
+              <tr style='background:#f8fafc;'>
+                <th style='padding:7px 12px;text-align:left;font-size:11px;color:#6b7280;
+                           text-transform:uppercase;letter-spacing:.05em;'>Plugin / Theme</th>
+                <th style='padding:7px 12px;text-align:left;font-size:11px;color:#6b7280;
+                           text-transform:uppercase;letter-spacing:.05em;'>Version</th>
+                <th style='padding:7px 12px;text-align:right;font-size:11px;color:#6b7280;
+                           text-transform:uppercase;letter-spacing:.05em;'>Status</th>
+              </tr>
+            </thead>
+            <tbody>";
+
+                foreach ( $rows as $er ) {
+                    $ename       = esc_html( $er->item_name );
+                    $eold        = esc_html( $er->old_version );
+                    $enew        = esc_html( $er->new_version );
+                    $ver_display = $eold ? "{$eold} &rarr; {$enew}" : $enew;
+
+                    $families_html .= "
+              <tr>
+                <td style='padding:9px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;'>
+                  <strong>{$ename}</strong>
+                </td>
+                <td style='padding:9px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;
+                           color:#6b7280;'>{$ver_display}</td>
+                <td style='padding:9px 12px;border-bottom:1px solid #e5e7eb;text-align:right;'>
+                  <span style='color:#16a34a;font-weight:700;font-size:12px;'>&#10003; Updated</span>
+                </td>
+              </tr>";
+                }
+
+                $families_html .= "
+            </tbody>
+          </table>
+        </div>";
             }
+
             $external_section = "
-        <h3 style='color:#1e3a5f;font-size:15px;margin:28px 0 10px;border-bottom:2px solid #e5e7eb;padding-bottom:6px;'>&#128260; Updates Made Outside Greenskeeper</h3>
-        <p style='font-size:12px;color:#6b7280;margin:0 0 10px;'>The following updates were applied through the WordPress Updates screen, the Avada plugins dashboard, or another external tool. Greenskeeper detected these automatically via WordPress update hooks.</p>
-        <table width='100%' cellpadding='0' cellspacing='0' style='border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;'>
-          <thead>
-            <tr style='background:#f0fdf4;'>
-              <th style='padding:9px 14px;text-align:left;font-size:12px;color:#166534;text-transform:uppercase;letter-spacing:.05em;'>Item</th>
-              <th style='padding:9px 14px;text-align:right;font-size:12px;color:#166534;text-transform:uppercase;letter-spacing:.05em;'>Status</th>
-            </tr>
-          </thead>
-          <tbody>{$ext_html}</tbody>
-        </table>
-        <p style='font-size:11px;color:#9ca3af;margin:6px 0 0;font-style:italic;'>Note: previous version numbers are not available for externally-triggered updates. Avada Patches applied through Avada&rsquo;s own maintenance dashboard are not detected here and should be documented using the Additional Manual Updates field.</p>";
+        <h3 style='color:#1e3a5f;font-size:15px;margin:28px 0 6px;border-bottom:2px solid #e5e7eb;
+                   padding-bottom:6px;'>&#128260; Updates Outside Greenskeeper</h3>
+        <p style='font-size:12px;color:#6b7280;margin:0 0 16px;'>
+          The following updates were applied through an external tool, proprietary dashboard,
+          or the WordPress Updates screen. Greenskeeper detected these automatically by
+          comparing installed versions.
+        </p>
+        {$families_html}";
         }
     }
 

@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.3.7  
+**Version:** 2.3.8  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,11 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.3.8
+- Feature: Universal external update detection via version snapshot comparison
+- Feature: Grouped email section for external updates by product family
+- Feature: 40+ product family map with pattern-based slug matching
+
 ### 2.3.7
 - Fix: Subsequent updates failing after one failure — already_succeeded check bypassed on retries
 - Fix: Retry button showing already-succeeded instead of running update — is_retry flag added
@@ -1033,6 +1038,11 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.3.8
+- Feature: Universal external update detection via version snapshot comparison
+- Feature: Grouped email section for external updates by product family
+- Feature: 40+ product family map with pattern-based slug matching
 
 ### 2.3.7
 - Fix: Subsequent updates failing after one failure — already_succeeded check bypassed on retries

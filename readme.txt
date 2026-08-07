@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.3.7
+Stable tag:        2.3.8
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -774,6 +774,30 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.3.8 =
+* Feature: Universal external update detection. Greenskeeper now
+  detects plugin and theme version changes made by any external tool
+  — Avada's dashboard, Divi's updater, WP Rocket, ACF Pro, Gravity
+  Forms, Elementor Pro, and 40+ other known plugin families — by
+  comparing a stored version snapshot against currently installed
+  versions on every admin page load. Detected changes are logged to
+  the Update Log and included in the next email report under "Updates
+  Outside Greenskeeper." Already-logged Greenskeeper updates are
+  filtered out to prevent duplication.
+* Feature: Grouped email section for external updates. The "Updates
+  Outside Greenskeeper" email section now groups updates by product
+  family with a sub-heading for each (e.g. Avada Theme Suite, Gravity
+  Forms, Elementor, WP Rocket). Each family shows a table with plugin
+  name, old → new version, and status. Updates not matching a known
+  family appear under "Other External Updates."
+* Feature: Product family map covering 40+ known plugin and theme
+  families using pattern-based slug matching. New plugins in a known
+  family are detected automatically without any code changes.
+* Fix: Per-item Retry button now passes is_retry=true to the server
+  so the already_succeeded guard is bypassed on explicit retries.
+* Fix: Amber notices and Retry buttons now cleared on all-success
+  completion from both initial batch and retry passes.
 
 = 2.3.7 =
 * Fix: Subsequent plugin updates failing after one failure. The

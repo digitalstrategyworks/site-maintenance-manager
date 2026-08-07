@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Greenskeeper
  * Description: Manage WordPress updates, filter comment spam, send branded email reports, and configure SMTP delivery — all from one dashboard. Supports single-site and Multisite.
- * Version:     2.3.7
+ * Version:     2.3.8
  * Author:      Tony Zeoli
  * Author URI:  https://digitalstrategyworks.com
  * License:     GPL-2.0+
@@ -24,7 +24,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'WPMM_VERSION',    '2.3.7' );
+define( 'WPMM_VERSION',    '2.3.8' );
 define( 'WPMM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -91,6 +91,7 @@ require_once WPMM_PLUGIN_DIR . 'includes/email.php';
 require_once WPMM_PLUGIN_DIR . 'includes/smtp.php';
 require_once WPMM_PLUGIN_DIR . 'includes/ajax.php';
 require_once WPMM_PLUGIN_DIR . 'includes/activity-log.php';
+require_once WPMM_PLUGIN_DIR . 'includes/external-detector.php';
 require_once WPMM_PLUGIN_DIR . 'admin/admin.php';
 require_once WPMM_PLUGIN_DIR . 'admin/settings.php';
 require_once WPMM_PLUGIN_DIR . 'admin/activity-log.php';
