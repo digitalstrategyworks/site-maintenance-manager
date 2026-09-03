@@ -1,6 +1,6 @@
 # Greenskeeper
 
-**Version:** 2.4  
+**Version:** 2.4.1  
 **Author:** [Tony Zeoli](https://digitalstrategyworks.com)  
 **License:** [GPL-2.0+](https://www.gnu.org/licenses/gpl-2.0.html)  
 **Copyright:** © 2026 Digital Strategy Works LLC  
@@ -705,6 +705,11 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 
 ## Changelog
 
+### 2.4.1
+- Fix: Disable All Auto-Updates button unclickable — replaced prop(disabled) with data-working flag
+- Fix: Per-item Retry not updating amber banner — now feeds back into batch counters and re-evaluates banner state
+- Fix: already_succeeded shows green success state instead of amber notice with Retry button
+
 ### 2.4
 - Feature: Disable All Auto-Updates — amber warning, one-click disable, confirmation card, activity log
 - Feature: Automatic 502/503/504 backoff retry with progress feedback
@@ -1053,6 +1058,11 @@ For licensing enquiries: [tony@digitalstrategyworks.com](mailto:tony@digitalstra
 ### 1.3.9
 - Critical fix: SQL_NO_CACHE removed — caused fatal error on MySQL 8.0+
 - Live autocomplete search on Update Log
+
+### 2.4.1
+- Fix: Disable All Auto-Updates button unclickable — replaced prop(disabled) with data-working flag
+- Fix: Per-item Retry not updating amber banner — now feeds back into batch counters and re-evaluates banner state
+- Fix: already_succeeded shows green success state instead of amber notice with Retry button
 
 ### 2.4
 - Feature: Disable All Auto-Updates — amber warning, one-click disable, confirmation card, activity log

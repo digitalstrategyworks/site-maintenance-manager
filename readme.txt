@@ -6,7 +6,7 @@ Tags:              maintenance, updates, smtp, email, multisite
 Requires at least: 5.8
 Tested up to:      7.0
 Requires PHP:      8.0
-Stable tag:        2.4
+Stable tag:        2.4.1
 License:           GPL-2.0+
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 Copyright:         2026 Digital Strategy Works LLC
@@ -774,6 +774,28 @@ identity in a manner that implies endorsement or affiliation is prohibited.
 For licensing enquiries contact: tony@digitalstrategyworks.com
 
 == Changelog ==
+
+= 2.4.1 =
+* Fix: "Disable All Auto-Updates" button on the Updates page was
+  unclickable. The previous implementation called prop('disabled', true)
+  before the click could fully register, blocking the AJAX call from
+  firing. Replaced with a data-working flag approach that prevents
+  double-clicks without blocking the initial click event.
+* Fix: Per-item Retry button (in the plugin row) was not updating the
+  amber completion banner when the retry succeeded. The click handler
+  was passing an empty callback to runSingleUpdate, so batchSuccessCount
+  and batchFailCount never updated after a per-item retry. The handler
+  now calls onItemComplete logic directly after each per-item retry,
+  decrements batchFailCount when a previously failed item succeeds,
+  and re-evaluates the bottom banner state — switching from amber to
+  green when all items have completed successfully.
+* Fix: "Already succeeded" items showing an amber notice with a Retry
+  button instead of the green "Updated ✓" success state. When the
+  server returns already_succeeded, the item is confirmed up to date
+  and should show green immediately — there is nothing to retry.
+  already_succeeded and info-severity responses are now treated
+  identically to a fresh success: green button, green checkmark,
+  counted in batchSuccessCount, never shown as amber or failure.
 
 = 2.4 =
 * Feature: Disable All Auto-Updates. Amber warning banner on the

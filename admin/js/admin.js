@@ -673,13 +673,66 @@ jQuery(function ($) {
                 sessionId          = 'wpmm-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
                 updatesRanThisLoad = true;
             }
+            var isRetryClick = $btn.text().trim() === 'Retry';
             runSingleUpdate(
                 $li.data('type'),
                 $li.data('slug'),
                 $li.data('package') || '',
                 $li,
                 $btn,
-                function () {}
+                function (itemName, success) {
+                    // ── Update batch counters so the bottom banner stays accurate ──
+                    if (success) {
+                        batchSuccessCount++;
+                        // If this item was previously counted as a failure, un-count it.
+                        if (isRetryClick && batchFailCount > 0) {
+                            batchFailCount--;
+                            failedItems = failedItems.filter(function (f) {
+                                return f.slug !== $li.data('slug');
+                            });
+                        }
+                    } else {
+                        if (!isRetryClick) { batchFailCount++; }
+                    }
+
+                    // Re-evaluate and update the bottom banner.
+                    $('#wpmm-global-success, #wpmm-global-partial, #wpmm-global-allfailed')
+                        .prop('hidden', true);
+
+                    if (batchSuccessCount > 0 || batchFailCount > 0) {
+                        if (batchFailCount === 0) {
+                            // All done — show green banner, clear amber notices.
+                            $('.wpmm-item-status').each(function () {
+                                if ($(this).find('.dashicons-info').length) { $(this).html(''); }
+                            });
+                            $('.wpmm-update-one-btn').each(function () {
+                                if ($(this).text().trim() === 'Retry') {
+                                    $(this).prop('disabled', true).css('opacity', '0.3');
+                                }
+                            });
+                            $('#wpmm-success-msg').text(
+                                'All ' + batchSuccessCount + ' of ' + totalItems +
+                                ' update' + (totalItems !== 1 ? 's' : '') + ' completed successfully!'
+                            );
+                            $('#wpmm-global-success').prop('hidden', false);
+                        } else if (batchSuccessCount === 0) {
+                            $('#wpmm-allfailed-msg').text(
+                                'All ' + batchFailCount + ' update' +
+                                (batchFailCount !== 1 ? 's' : '') + ' failed.'
+                            );
+                            $('#wpmm-global-allfailed').prop('hidden', false);
+                        } else {
+                            $('#wpmm-partial-msg').html(
+                                '<strong>' + batchSuccessCount + ' of ' + totalItems +
+                                ' updates completed.</strong> ' + batchFailCount + ' update' +
+                                (batchFailCount !== 1 ? 's' : '') +
+                                ' failed — retry them now, or send the report with successful updates only.'
+                            );
+                            $('#wpmm-global-partial').prop('hidden', false);
+                        }
+                    }
+                },
+                isRetryClick // pass isRetry flag so server bypasses already_succeeded check
             );
         });
     });
@@ -754,21 +807,28 @@ jQuery(function ($) {
             success: function (res) {
                 $btn.prop('disabled', false);
                 var itemName = (res.data && res.data.name) ? res.data.name : slug;
-                var status   = res.data && res.data.status ? res.data.status : '';
-                var success  = res.success && status === 'success';
+                var status    = res.data && res.data.status ? res.data.status : '';
+                var success   = res.success && status === 'success';
                 var alreadyOk = res.success && status === 'already_succeeded';
-                var isInfo   = res.success && res.data && res.data.severity === 'info';
+                var isInfo    = res.success && res.data && res.data.severity === 'info';
 
-                if (success) {
+                // Treat already_succeeded and info-severity as full green success.
+                // The item is confirmed up to date — show green, never amber.
+                if (success || alreadyOk || isInfo) {
                     $btn.html('Updated &#10003;')
                         .addClass('wpmm-btn-success')
                         .removeClass('wpmm-btn-primary')
                         .prop('disabled', true);
                     $status.html('<span class="wpmm-status-success">&#9989; Update Successful</span>');
-                    $li.find('.wpmm-item-meta').text('Updated to version ' + (res.data.new_version || ''));
+
+                    // For a genuine fresh update show the new version number.
+                    // For already_succeeded we don't have a new_version so skip.
+                    if ( success && res.data.new_version ) {
+                        $li.find('.wpmm-item-meta').text('Updated to version ' + res.data.new_version);
+                    }
 
                     // ── Core update — auto-dismiss confirmation notice ─────────
-                    if (type === 'core' && res.data.new_version) {
+                    if (success && type === 'core' && res.data.new_version) {
                         var $notice = $(
                             '<div class="notice notice-success is-dismissible wpmm-core-notice" ' +
                             'style="display:flex;align-items:center;gap:10px;padding:12px 16px;">' +
@@ -778,17 +838,14 @@ jQuery(function ($) {
                             'Your site is running the latest version.</p>' +
                             '</div>'
                         );
-                        // Inject above the Greenskeeper shell.
                         $('.wpmm-shell').before($notice);
-                        // Auto-dismiss after 4 seconds with a smooth fade.
                         setTimeout(function () {
                             $notice.fadeOut(600, function () { $notice.remove(); });
                         }, 4000);
                     }
 
-                    // If plugins were collaterally deactivated and restored, show
-                    // a compact notice below the item.
-                    if (res.data.collateral_restored && res.data.collateral_restored.length) {
+                    // Collaterally deactivated plugins notice.
+                    if (success && res.data.collateral_restored && res.data.collateral_restored.length) {
                         var names = res.data.collateral_restored.map(function(p) {
                             return escHtml(p.replace(/\/.*$/, ''));
                         }).join(', ');
@@ -808,26 +865,11 @@ jQuery(function ($) {
                         }, 12000);
                     }
 
-                } else if (alreadyOk || isInfo) {
-                    // ── Informational / already-succeeded ─────────────────────
-                    // Show amber inline notice — not a red failure.
-                    var infoMsg = (res.data && res.data.message) ? res.data.message : 'No pending update found.';
-                    $btn.html('Retry').removeClass('wpmm-btn-success wpmm-btn-primary')
-                        .css({ background: '', color: '' });
-                    $status.html(
-                        '<span style="display:inline-flex;align-items:flex-start;gap:6px;' +
-                        'background:#fffbeb;border:1px solid #fde68a;border-radius:4px;' +
-                        'padding:6px 10px;font-size:12px;color:#92400e;line-height:1.5;">' +
-                        '<span class="dashicons dashicons-info" style="color:#f59e0b;font-size:14px;' +
-                        'width:14px;height:14px;flex-shrink:0;margin-top:1px;"></span>' +
-                        '<span>' + escHtml(infoMsg) + '</span>' +
-                        '</span>'
-                    );
-                    // Treat as success for batch counting — item is up to date.
+                    // Always count as success for batch tracking.
                     callback(itemName, true, res.data || {});
-                    return;
 
                 } else {
+                    // ── Genuine failure ───────────────────────────────────────
                     var msg = '';
                     if (res.data && typeof res.data === 'object' && res.data.message) {
                         msg = res.data.message;
@@ -841,8 +883,8 @@ jQuery(function ($) {
                         '<span class="wpmm-status-failed">&#10060; Update Failed</span>' +
                         '<div class="wpmm-status-failed-reason">' + escHtml(msg) + '</div>'
                     );
+                    callback(itemName, false, res.data || {});
                 }
-                callback(itemName, success, res.data || {});
             },
             error: function (xhr, status) {
                 $btn.prop('disabled', false);
@@ -2252,19 +2294,23 @@ jQuery(function ($) {
 
     // ── Disable all auto-updates ────────────────────────────────────────────
     // Handles the button on both the Updates page and the Settings page.
-    function wpmm_do_disable_auto_updates($resultSelector, $btnSelector) {
-        var $btn    = $(btnSelector).prop('disabled', true);
+    function wpmm_do_disable_auto_updates(resultSelector, btnSelector) {
+        var $btn    = $(btnSelector);
         var $result = $(resultSelector);
-        $btn.html('<span class="dashicons dashicons-update wpmm-spin" style="font-size:14px;width:14px;height:14px;"></span> Disabling&hellip;');
+
+        // Prevent double-clicks without blocking the initial click.
+        if ($btn.data('working')) { return; }
+        $btn.data('working', true)
+            .html('<span class="dashicons dashicons-update wpmm-spin" style="font-size:14px;width:14px;height:14px;"></span> Disabling&hellip;');
         $result.html('<span style="color:var(--wpmm-gray);">Working&hellip;</span>');
 
         $.post(wpmm.ajax_url, {
             action: 'wpmm_disable_auto_updates',
             nonce:  wpmm.nonce,
         }, function (res) {
-            $btn.prop('disabled', false);
+            $btn.data('working', false);
             if (res.success) {
-                var d = res.data;
+                var d   = res.data;
                 var msg = 'Auto-updates disabled for ' + d.plugins_disabled + ' plugin' +
                     (d.plugins_disabled !== 1 ? 's' : '');
                 if (d.themes_disabled) {
@@ -2273,13 +2319,10 @@ jQuery(function ($) {
                 }
                 msg += '.';
 
-                // Update the button area to show success.
                 $result.html('<span style="color:var(--wpmm-green);">&#10003; ' + msg + '</span>');
-
-                // Hide the warning banner on the Updates page.
                 $('#wpmm-auto-update-warning').slideUp(400);
 
-                // Show the post-disable info card.
+                // Show post-disable confirmation card.
                 if (!$('#wpmm-auto-update-disabled-card').length) {
                     var pluginsUrl = wpmm.plugins_url || '';
                     var card = '<div id="wpmm-auto-update-disabled-card" ' +
@@ -2292,7 +2335,8 @@ jQuery(function ($) {
                         '<p style="margin:0 0 10px;font-size:13px;color:#166534;line-height:1.6;">' +
                         'Greenskeeper now has full control over updates on this site. ' +
                         'To re-enable auto-updates for a specific plugin, visit the ' +
-                        'WordPress Plugins screen and click "Enable auto-updates" in the Auto-updates column.' +
+                        'WordPress Plugins screen and click &ldquo;Enable auto-updates&rdquo; ' +
+                        'in the Auto-updates column.' +
                         '</p>' +
                         (pluginsUrl ? '<a href="' + pluginsUrl + '" class="wpmm-btn wpmm-btn-secondary wpmm-btn-sm" style="font-size:12px;">' +
                         '<span class="dashicons dashicons-admin-plugins" style="font-size:13px;width:13px;height:13px;"></span> ' +
@@ -2301,22 +2345,26 @@ jQuery(function ($) {
                     $btn.closest('.wpmm-card, #wpmm-auto-update-warning').after(card);
                 }
 
-                // On Settings page — update the status block to green.
+                // Settings page status update.
                 $('#wpmm-auto-update-settings-status').html(
-                    '<span class="dashicons dashicons-yes-alt" style="color:#16a34a;font-size:20px;width:20px;height:20px;flex-shrink:0;margin-top:1px;"></span>' +
-                    '<div><strong style="color:#166534;display:block;margin-bottom:3px;">All auto-updates are disabled</strong>' +
-                    '<p style="margin:0;font-size:13px;color:#166534;">Greenskeeper has full control over updates on this site.</p></div>'
-                ).css({ 'background': '#f0fdf4', 'border-color': '#bbf7d0' });
+                    '<span class="dashicons dashicons-yes-alt" style="color:#16a34a;font-size:20px;' +
+                    'width:20px;height:20px;flex-shrink:0;margin-top:1px;"></span>' +
+                    '<div><strong style="color:#166534;display:block;margin-bottom:3px;">' +
+                    'All auto-updates are disabled</strong>' +
+                    '<p style="margin:0;font-size:13px;color:#166534;">' +
+                    'Greenskeeper has full control over updates on this site.</p></div>'
+                ).css({ background: '#f0fdf4', 'border-color': '#bbf7d0' });
                 $('#wpmm-disable-auto-updates-settings-btn').closest('div').slideUp(300);
 
             } else {
-                $result.html('<span style="color:var(--wpmm-red);">Failed to disable auto-updates. Please try again.</span>');
-                $btn.html('<span class="dashicons dashicons-dismiss" style="font-size:14px;width:14px;height:14px;"></span> Disable All Auto-Updates');
+                $btn.data('working', false)
+                    .html('<span class="dashicons dashicons-dismiss" style="font-size:14px;width:14px;height:14px;"></span> Disable All Auto-Updates');
+                $result.html('<span style="color:var(--wpmm-red);">Failed — please try again.</span>');
             }
         }).fail(function () {
-            $btn.prop('disabled', false)
+            $btn.data('working', false)
                 .html('<span class="dashicons dashicons-dismiss" style="font-size:14px;width:14px;height:14px;"></span> Disable All Auto-Updates');
-            $result.html('<span style="color:var(--wpmm-red);">Request failed. Please try again.</span>');
+            $result.html('<span style="color:var(--wpmm-red);">Request failed — please try again.</span>');
         });
     }
 
